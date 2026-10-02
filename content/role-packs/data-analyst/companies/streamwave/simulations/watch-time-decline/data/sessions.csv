@@ -1,0 +1,4 @@
+session_id,user_id,content_id,started_at,duration_seconds,client
+s1,u1,c1,2026-08-01T10:00:00Z,1800,web
+s2,u1,c1,2026-08-01T10:00:00Z,1800,mobile
+s3,u2,c2,2026-08-02T18:30:00Z,2400,web

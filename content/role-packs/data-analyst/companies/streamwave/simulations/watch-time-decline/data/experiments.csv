@@ -1,0 +1,4 @@
+user_id,experiment,arm
+u1,recommendation-v2,A
+u2,recommendation-v2,B
+u3,recommendation-v2,A

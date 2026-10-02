@@ -1,0 +1,24 @@
+{
+  "name": "@casebench/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@casebench/domain": "workspace:*",
+    "@casebench/simulation-engine": "workspace:*",
+    "@casebench/ai": "workspace:*",
+    "next": "^15.0.0",
+    "server-only": "^0.0.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/react": "^19.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

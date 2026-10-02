@@ -1,0 +1,4 @@
+user_id,plan,status
+u1,standard,active
+u2,premium,active
+u3,standard,canceled

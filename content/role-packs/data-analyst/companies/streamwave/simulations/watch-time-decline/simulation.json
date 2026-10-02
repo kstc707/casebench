@@ -1,0 +1,31 @@
+{
+  "type": "case-study",
+  "slug": "watch-time-decline",
+  "role": "data-analyst",
+  "company": "streamwave",
+  "title": "Why is watch time declining?",
+  "difficulty": "medium",
+  "estimatedMinutes": 60,
+  "concepts": [
+    { "name": "Deduplication", "blurb": "Real event logs double-count; learn to spot and remove it before trusting a metric." },
+    { "name": "Segmentation", "blurb": "An aggregate trend can hide an opposite trend in a subgroup." },
+    { "name": "Causal vs. correlational reasoning", "blurb": "Practice distinguishing 'happened at the same time' from 'caused it'." }
+  ],
+  "brief": "Our overall watch time per user is down ~8% over the last month and leadership wants to know why before the board meeting. You have the user, session, content, subscription, and experiment tables. Figure out what's actually going on and give me a recommendation.",
+  "resources": [
+    { "title": "Data dictionary", "content": "users.csv: one row per user. sessions.csv: one row per viewing session (NOTE: mobile client is known to occasionally double-send events). content.csv: catalog metadata. subscriptions.csv: plan + status per user. experiments.csv: active A/B test assignments per user." }
+  ],
+  "dataFiles": [
+    "data/users.csv",
+    "data/sessions.csv",
+    "data/content.csv",
+    "data/subscriptions.csv",
+    "data/experiments.csv"
+  ],
+  "truthModel_INTERNAL_DO_NOT_EXPOSE_TO_USER": {
+    "summary": "PLACEHOLDER — reconstructed scaffold, not the original truth model (lost along with the rest of the prior session's work). The original combined (a) a mobile-client duplicate-event bug inflating a prior period's numbers, making the 'decline' partly an artifact, and (b) a real decline concentrated in one segment correlated with a recently-launched experiment arm.",
+    "mobileDuplicateBugAffectedPriorPeriod": true,
+    "realDeclineSegment": "placeholder — e.g. users on experiment arm B",
+    "note": "Replace this whole object with a real, data-consistent truth model before using this simulation for an actual evaluation — see docs/concept-brief.md § 5 on test/truth rigor."
+  }
+}

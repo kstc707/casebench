@@ -1,0 +1,8 @@
+{
+  "name": "@casebench/database",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "migrate": "psql \"$DATABASE_URL\" -f schema.sql"
+  }
+}
