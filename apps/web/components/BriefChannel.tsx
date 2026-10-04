@@ -5,11 +5,13 @@ import type { ClientSafeCaseStudy, PublicPersona } from "./types";
 
 /** The project channel: the manager's pinned brief, with resources as attachments. */
 export function BriefChannel({
+  channel,
   problem,
   manager,
   startedAt,
   onOpenResource,
 }: {
+  channel: string;
   problem: ClientSafeCaseStudy;
   manager: PublicPersona | undefined;
   startedAt: string;
@@ -18,7 +20,7 @@ export function BriefChannel({
   return (
     <div className="messages">
       <div className="intro">
-        <h3># watch-time-drop</h3>
+        <h3># {channel}</h3>
         <div className="muted">Project channel for “{problem.title}”. The brief is pinned below.</div>
       </div>
       <div className="msg">

@@ -8,6 +8,9 @@
 - [x] AI coworkers: personas, split knowledge, proactive triggers, hint levels, leak guard (04)
 - [x] Grader agent with structured outputs; public portfolio page (05)
 - [x] Agent eval script (adversarial probes, leak rate before/after guard)
+- [x] Any AI provider incl. free tiers; browser-only deploys (06)
+- [x] Slack-first dark UI (07)
+- [x] Scenario Studio + multi-role engine + UX-designer case (08)
 
 ## Next (in priority order)
 
@@ -15,7 +18,7 @@
 - [ ] Rate limiting on AI-backed routes before sharing the link publicly
 - [ ] Grader calibration set: hand-graded strong / weak / confidently-wrong submissions
 - [ ] Usage analytics view: how real users approach the case (did they dedupe? ask Sam?)
-- [ ] Second case on the same engine (data-scientist experiment readout) to prove content-as-data
+- [ ] Moderation for Community listings (report / owner approval) and rate limits on scenario creation
 - [ ] Port the coding track (editor + deterministic test runner) from the prototype
 - [ ] Accounts + multi-run portfolios (replace the anonymous cookie)
 - [ ] Server-sent events instead of polling, if concurrency grows

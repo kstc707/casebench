@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { ScoredEvaluation, Submission } from "@casebench/agents";
+import { DEFAULT_DELIVERABLE, KNOWN_ROLES } from "@casebench/domain";
 import { getPool, getPublishedRun } from "../../../lib/db";
 import { getProblemBySlug, getPublicPersonas, getRubricLabels } from "../../../lib/problems";
 import { EvaluationView } from "../../../components/Feedback";
@@ -36,21 +37,21 @@ export default async function PortfolioPage({ params }: { params: Promise<{ runI
   return (
     <main className="page" style={{ display: "grid", gap: 16 }}>
       <div>
-        <p className="muted" style={{ margin: 0 }}>Casebench work simulation · {problem?.role}</p>
+        <p className="muted" style={{ margin: 0 }}>Casebench work simulation · {problem ? KNOWN_ROLES[problem.role] ?? problem.role : ""}</p>
         <h1 style={{ margin: "4px 0" }}>{problem?.title}</h1>
         <p>{portfolio.summary}</p>
         <p className="muted">
-          {Math.round((end - start) / 60_000)} minutes · {queries.length} SQL queries · {chat.filter((m) => m.type === "message_sent").length} messages
+          {Math.round((end - start) / 60_000)} minutes · {queries.length ? `${queries.length} SQL queries · ` : ""} {chat.filter((m) => m.type === "message_sent").length} messages
           to AI coworkers · published {new Date(portfolio.createdAt).toLocaleDateString()}
         </p>
       </div>
 
       <div className="card">
         <h2 style={{ marginTop: 0 }}>The write-up</h2>
-        {(["executiveSummary", "evidence", "caveats", "recommendation"] as const).map((k) => (
-          <div key={k}>
-            <h3 className="muted" style={{ fontSize: 13, textTransform: "uppercase" }}>{k.replace(/([A-Z])/g, " $1")}</h3>
-            <p style={{ whiteSpace: "pre-wrap" }}>{submission[k] || "—"}</p>
+        {((problem?.type === "case-study" && problem.deliverable) || DEFAULT_DELIVERABLE).map((sec) => (
+          <div key={sec.key}>
+            <h3 className="muted" style={{ fontSize: 13, textTransform: "uppercase" }}>{sec.label}</h3>
+            <p style={{ whiteSpace: "pre-wrap" }}>{submission[sec.key] || "—"}</p>
           </div>
         ))}
       </div>

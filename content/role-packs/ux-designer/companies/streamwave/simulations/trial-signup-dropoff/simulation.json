@@ -1,0 +1,48 @@
+{
+  "type": "case-study",
+  "slug": "trial-signup-dropoff",
+  "role": "ux-designer",
+  "company": "streamwave",
+  "companyName": "StreamWave",
+  "channel": "signup-funnel",
+  "title": "Why did free-trial sign-ups drop on mobile?",
+  "difficulty": "medium",
+  "estimatedMinutes": 75,
+  "concepts": [
+    { "name": "Evidence synthesis", "blurb": "Combine numbers, usability notes, and support tickets into findings you can defend." },
+    { "name": "Behaviour vs. opinion", "blurb": "What users did matters more than what they said they'd do." },
+    { "name": "Design for the real constraint", "blurb": "A small screen changes what 'visible' means." },
+    { "name": "Measurable design", "blurb": "Say how you'll know the redesign worked before you ship it." }
+  ],
+  "brief": "Since the new plan-picker shipped on Aug 10, free-trial starts on mobile are down roughly 40% while desktop is flat. Marketing thinks mobile users are just lower-intent this month; engineering blames page speed. I want a design answer: what's actually going wrong for people on mobile, and what should we change? Use the funnel numbers, the usability notes, and the support tickets. Send me your findings and a proposal by end of day.",
+  "resources": [
+    {
+      "title": "Plan picker v2 — what shipped on Aug 10",
+      "content": "Goal: grow annual subscriptions.\nLayout: three paid plan cards (Basic, Standard, Premium) shown first, annual pricing selected by default, prices shown as monthly equivalent (e.g. \"$4.99/mo\") with \"billed annually at $59.88\" in 11px grey text beneath. The \"Start 7-day free trial\" card is fourth in the list.\nDesktop: four cards side by side in one row.\nMobile: cards stack vertically, one per screen-height."
+    },
+    {
+      "title": "Usability test notes (5 participants, mobile, Aug 18)",
+      "content": "P1: Scrolled past Basic and Standard, said 'so there's no free trial anymore?' and closed the app.\nP2: Tapped Basic at $4.99, reached payment, saw $59.88: 'wait, what? I thought it was five bucks'. Abandoned.\nP3: Found the trial card after scrolling 3 screens; started trial. Said 'it was kind of hidden'.\nP4: Said the page 'loaded fine'. Picked Standard, surprised by annual total, went back, eventually found the trial.\nP5: Said she 'would definitely sign up' but did not complete during the session; never scrolled past the second card."
+    },
+    {
+      "title": "Support tickets (sample, Aug 11–30)",
+      "content": "\"Where did the free trial go??\" (x14)\n\"I was charged $59.88 but the app said $4.99\" (x9, all mobile)\n\"App is slow\" (x3)\n\"Love the new design\" (x1, desktop)"
+    },
+    {
+      "title": "Performance note from engineering",
+      "content": "Mobile Largest Contentful Paint on the plan picker went from 2.1s to 2.3s after v2. Within our 2.5s budget."
+    }
+  ],
+  "dataFiles": ["data/funnel.csv"],
+  "deliverable": [
+    { "key": "problemStatement", "label": "Problem statement", "hint": "One or two sentences: who is failing to do what, where, since when.", "rows": 3, "required": true },
+    { "key": "findings", "label": "Key findings & evidence", "hint": "What's going wrong and how you know: funnel numbers, test observations, tickets.", "rows": 8, "required": true },
+    { "key": "designProposal", "label": "Design proposal", "hint": "What you'd change and why. Describe the screens; add a Figma or sketch link if you have one.", "rows": 8, "required": true },
+    { "key": "successMetrics", "label": "How we'll know it worked", "hint": "The metric(s) you'd watch, the target, and any guardrails.", "rows": 4 }
+  ],
+  "truthModel_INTERNAL_DO_NOT_EXPOSE_TO_USER": {
+    "summary": "Two design problems in plan picker v2 hurt mobile only. (1) Discoverability: on mobile the cards stack, so the free-trial card (4th) sits ~3 screens down; many users conclude there's no trial and leave. The funnel shows mobile plan_select→account_create falling from ~68% to ~41% from the week of Aug 10, desktop flat (~67%→66%). (2) Price clarity: annual-by-default with monthly-equivalent pricing ('$4.99/mo', 'billed annually $59.88' in 11px grey) surprises users at payment; mobile account_create→payment falls ~83%→71%, and 9 mobile tickets about being charged $59.88. Page speed is a red herring (2.1→2.3s LCP, within budget; P4 said it loaded fine). 'Lower intent' is not supported: landing and plan_select volumes are stable.",
+    "strongProposal": "Put the free-trial option first or pinned on mobile (or a sticky 'Start free trial' CTA); show the real billed amount prominently or default to monthly on mobile; consider a compact comparison instead of full-height stacked cards. Measure mobile plan_select→trial_started conversion back to ~pre-Aug-10 levels, with annual-plan share and refund/chargeback tickets as guardrails, ideally via an A/B test.",
+    "redHerrings": ["page speed", "lower-intent mobile traffic", "P5's stated intent"]
+  }
+}

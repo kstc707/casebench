@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { ScoredEvaluation, Submission } from "@casebench/agents";
 import { getPool, getRun, publishRun } from "../../../../../lib/db";
 import { getProblemBySlug } from "../../../../../lib/problems";
+import { DEFAULT_DELIVERABLE } from "@casebench/domain";
 import { getUserId } from "../../../../../lib/session";
 import { handleRouteError, jsonError, runIdFrom } from "../../../../../lib/api";
 
@@ -29,11 +30,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     const queries = run.events.filter((e) => e.type === "query_run").length;
     const messages = run.events.filter((e) => e.type === "message_sent").length;
-    const firstSentence = submission.executiveSummary.split(/(?<=[.!?])\s/)[0].slice(0, 300);
+    const sections = (problem?.type === "case-study" && problem.deliverable) || DEFAULT_DELIVERABLE;
+    const lead = submission[sections[0].key] ?? Object.values(submission)[0] ?? "";
+    const firstSentence = lead.split(/(?<=[.!?])\s/)[0].slice(0, 300);
     const summary = [
       `${problem?.title ?? run.problemSlug} — scored ${feedback.score}/100${feedback.gradedBy === "ai" ? "" : " (offline grader)"}.`,
       `Finding: ${firstSentence}`,
-      `Process: ${queries} SQL queries, ${messages} messages with coworkers.`,
+      `Process: ${queries ? `${queries} SQL queries, ` : ""}${messages} messages with coworkers.`,
     ].join(" ");
 
     await publishRun(pool, id, userId, summary, feedback.score);

@@ -39,14 +39,16 @@ export function firedTriggerIds(events: RunEvent[]): Set<string> {
   );
 }
 
-const TABLE_NAMES = ["users", "sessions", "content", "subscriptions", "experiments", "marketing_campaigns"];
+/** Table names a query reads from (FROM / JOIN), so agents know what you've looked at. */
+export function tablesIn(sql: string): string[] {
+  const names = [...sql.matchAll(/\b(?:from|join)\s+([a-z_][a-z0-9_]*)/gi)].map((m) => m[1].toLowerCase());
+  return names.filter((n) => !["select", "lateral", "unnest"].includes(n));
+}
 
 /** A compact, factual description of the user's work so far, for the agent's context. */
 export function summarizeActivity(events: RunEvent[], now: number): string {
   const qs = queries(events);
-  const touched = TABLE_NAMES.filter((t) =>
-    qs.some((q) => new RegExp(`\\b${t}\\b`, "i").test(q.sql))
-  );
+  const touched = [...new Set(qs.flatMap((q) => tablesIn(q.sql)))];
   const resources = [
     ...new Set(events.flatMap((e) => (e.type === "resource_opened" ? [e.resourceTitle] : []))),
   ];
@@ -74,7 +76,7 @@ export function summarizeActivity(events: RunEvent[], now: number): string {
 /** The Slack DM between the user and one agent, as plain text. */
 export function transcript(events: RunEvent[], channel: string, agentName: string): string {
   const lines = events.flatMap((e) => {
-    if (e.type === "message_sent" && e.channel === channel) return [`You (new analyst): ${e.text}`];
+    if (e.type === "message_sent" && e.channel === channel) return [`You (new teammate): ${e.text}`];
     if (e.type === "message_received" && e.channel === channel) return [`${agentName}: ${e.text}`];
     return [];
   });

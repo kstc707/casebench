@@ -70,11 +70,12 @@ when no key is set.
 | `POST /api/runs/:id/submit` | Freeze the write-up, grade it, manager reacts (retry-safe) |
 | `POST /api/runs/:id/publish` | Freeze the run, create the portfolio entry |
 | `GET /api/problems/:slug/data/:file` | Serve a CSV — only files listed in the case's `dataFiles` |
+| `/api/studio/scenarios/**` + `/studio` pages | Scenario Studio: create/import, edit (validated on save), list in Community, export, delete |
 | `/portfolio/:runId` (page) | Public record of a published run |
 | `lib/agents.ts` | The orchestrator (fire triggers, reply, post-evaluation reaction) |
 | `lib/session.ts` | Anonymous identity cookie |
 | `lib/runEvents.ts` | Validates what a browser may log (allow-list) |
-| `lib/problems.ts` | The only door to content; client-safe views + server-only bundles |
+| `lib/problems.ts` | The only door to content — official files *and* Studio scenarios (slug `s-…`); client-safe views + server-only bundles |
 
 ### Packages
 
@@ -84,8 +85,8 @@ when no key is set.
 | `database` | `src/runs.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
 | `agents` | `triggers.ts`, `hints.ts`, `prompt.ts`, `respond.ts`, `guard.ts`, `evaluator.ts` | The agent engine and the grader |
 | `ai` | `anthropicProvider.ts`, `openaiCompatibleProvider.ts`, `mockProvider.ts`, `config.ts` | Model calls (Claude or Gemini/Groq/…); model choice; offline mode |
-| `simulation-engine` | `loadRolePack.ts` | Load cases, personas, agents, rubric; strip secrets |
-| `content-tools` | `streamwave.ts`, `analyzeStreamwave.ts` | Seeded data generator + independent analyzer |
+| `simulation-engine` | `loadRolePack.ts`, `scenarioSchema.ts`, `starterScenario.ts` | Load cases; the one schema every scenario must pass; Studio template; strip secrets |
+| `content-tools` | `streamwave.ts`, `analyzeStreamwave.ts`, `import-scenario.ts` | Seeded data generator + analyzer; promote Studio exports to official files |
 
 ### Content (`content/role-packs/data-analyst/companies/streamwave/`)
 

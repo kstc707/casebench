@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { evaluateSubmission, SubmissionSchema, type Submission } from "@casebench/agents";
+import { evaluateSubmission, parseSubmission, type Submission } from "@casebench/agents";
+import { DEFAULT_DELIVERABLE } from "@casebench/domain";
 import { getAIProvider } from "@casebench/ai";
 import { appendRunEvent, getPool, getRun } from "../../../../../lib/db";
 import { getBundle } from "../../../../../lib/problems";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * POST /api/runs/:id/submit { executiveSummary, evidence, caveats, recommendation }
+ * POST /api/runs/:id/submit { <section key>: text, ... } — sections come from the problem
  *
  * 1. Freeze the submission (submission_finalized).
  * 2. Grade it against the rubric + hidden truth + the user's actual process.
@@ -31,14 +32,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const bundle = await getBundle(run.problemSlug);
     if (!bundle?.rubric || bundle.problem.type !== "case-study") return jsonError(400, "This problem can't be graded");
 
+    const sections = bundle.problem.deliverable ?? DEFAULT_DELIVERABLE;
     let submission: Submission;
     if (run.status === "submitted") {
       const finalized = run.events.find((e) => e.type === "submission_finalized");
       submission = (finalized as { submission: Submission }).submission;
     } else {
-      const parsed = SubmissionSchema.safeParse(await readJsonBody(req));
-      if (!parsed.success) return jsonError(400, "Executive summary and recommendation are required");
-      submission = parsed.data;
+      const parsed = parseSubmission(await readJsonBody(req), sections);
+      if (!parsed.ok) return jsonError(400, parsed.error);
+      submission = parsed.submission;
       await appendRunEvent(pool, id, userId, {
         type: "submission_finalized",
         at: new Date().toISOString(),
@@ -53,6 +55,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       truth: bundle.problem.truthModel_INTERNAL_DO_NOT_EXPOSE_TO_USER,
       analysis: bundle.analysis,
       submission,
+      sections,
       events: run.events,
     });
     await appendRunEvent(pool, id, userId, {

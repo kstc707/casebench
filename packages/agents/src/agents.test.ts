@@ -5,7 +5,7 @@ import { dueTriggers } from "./triggers";
 import { currentHintLevel } from "./hints";
 import { applyLeakGuards } from "./guard";
 import { generateAgentMessage, replyInstruction } from "./respond";
-import { evaluateSubmission, heuristicEvaluation, weightedScore } from "./evaluator";
+import { evaluateSubmission, heuristicEvaluation, parseSubmission, weightedScore } from "./evaluator";
 import { summarizeActivity } from "./activity";
 
 const T0 = Date.parse("2026-09-01T10:00:00Z");
@@ -123,7 +123,7 @@ describe("generateAgentMessage", () => {
     expect(call.system).toContain("Reveal grading");
     expect(call.user).toContain("Hint level allowed right now: 0.");
     expect(call.user).toContain("select * from sessions");
-    expect(call.user).toContain("You (new analyst): where should I start?");
+    expect(call.user).toContain("You (new teammate): where should I start?");
     expect(call.model).toBe("claude-haiku-4-5");
   });
 
@@ -151,7 +151,7 @@ const rubric: Rubric = {
   problemSlug: "p",
   scale: { min: 0, max: 4 },
   criteria: [
-    { key: "data_quality", label: "DQ", description: "", weight: 0.75, weak: "", strong: "" },
+    { key: "data_quality", label: "DQ", description: "", weight: 0.75, weak: "", strong: "", offlineKeywords: ["duplicat|dedup", "5\\.2|mobile"] },
     { key: "communication", label: "Comms", description: "", weight: 0.25, weak: "", strong: "" },
   ],
 };
@@ -180,6 +180,9 @@ describe("evaluation", () => {
 
     const weak = heuristicEvaluation(rubric, { executiveSummary: "Engagement is down.", evidence: "", caveats: "", recommendation: "Improve engagement." });
     expect(weak.criteria.find((c) => c.key === "data_quality")?.score).toBe(0);
+    // No keywords (communication here): scored on effort only.
+    expect(weak.criteria.find((c) => c.key === "communication")?.score).toBe(0);
+    expect(heuristicEvaluation(rubric, { a: "x".repeat(150) }).criteria.find((c) => c.key === "communication")?.score).toBe(2);
   });
 });
 
@@ -188,6 +191,21 @@ describe("summarizeActivity", () => {
     const text = summarizeActivity([start, query(3, "select * from users join experiments using (user_id)")], now(5));
     expect(text).toContain("Queries run: 1");
     expect(text).toContain("Tables queried: users, experiments");
+    expect(summarizeActivity([start, query(1, "WITH s AS (SELECT * FROM funnel) SELECT * FROM s")], now(2))).toContain("Tables queried: funnel, s");
     expect(text).toContain("Write-up: not started");
   });
 });
+
+describe("parseSubmission", () => {
+  const sections = [
+    { key: "insight", label: "Key insight", hint: "", required: true },
+    { key: "design", label: "Proposed design", hint: "" },
+  ];
+  it("keeps only the problem's own sections and enforces required ones", () => {
+    const ok = parseSubmission({ insight: " Users miss the trial option ", design: "Move it up", extra: "ignored" }, sections);
+    expect(ok).toEqual({ ok: true, submission: { insight: "Users miss the trial option", design: "Move it up" } });
+    expect(parseSubmission({ design: "x" }, sections)).toEqual({ ok: false, error: "Key insight is required" });
+    expect(parseSubmission({ insight: 5 }, sections).ok).toBe(false);
+  });
+});
+

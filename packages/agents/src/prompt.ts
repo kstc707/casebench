@@ -24,7 +24,7 @@ export function buildAgentSystemPrompt(
   problem: ProblemContext
 ): string {
   return [
-    `You are ${persona.name}, ${persona.title} at ${persona.company}. A new analyst on the team is working on an assignment, and you talk with them in Slack direct messages.`,
+    `You are ${persona.name}, ${persona.title} at ${persona.company}. A new teammate is working on an assignment, and you talk with them in Slack direct messages.`,
     ``,
     `Your role: ${ROLE_DESCRIPTION[persona.role]}`,
     `How you write: ${persona.tone} Slack style: usually one to three short sentences, plain text, no headings, no sign-offs. Stay in character; never mention being an AI, a model, or a simulation.`,

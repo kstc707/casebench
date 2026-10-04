@@ -95,7 +95,23 @@ export interface ProblemBundle {
   agents: AgentsConfig;
   rubric: Rubric | null;
   analysis: unknown;
-  dir: string;
+  /** Folder on disk (file-based scenarios). */
+  dir: string | null;
+  /** CSV contents by file name (Studio scenarios, stored in the database). */
+  inlineData?: Record<string, string>;
+}
+
+/** Turn a validated Studio scenario into the same bundle shape file scenarios use. */
+export function bundleFromScenario(s: import("./scenarioSchema").ScenarioBundle): ProblemBundle {
+  return {
+    problem: s.problem,
+    personas: s.personas,
+    agents: s.agents,
+    rubric: s.rubric,
+    analysis: null,
+    dir: null,
+    inlineData: s.data ?? {},
+  };
 }
 
 export async function loadProblemBundle(slug: string): Promise<ProblemBundle | null> {
@@ -139,6 +155,8 @@ export async function readDataFile(bundle: ProblemBundle, fileName: string): Pro
   if (bundle.problem.type !== "case-study") return null;
   const allowed = bundle.problem.dataFiles.find((f) => path.basename(f) === fileName);
   if (!allowed) return null;
+  if (bundle.inlineData) return bundle.inlineData[fileName] ?? null;
+  if (!bundle.dir) return null;
   return readFile(path.join(bundle.dir, allowed), "utf-8");
 }
 

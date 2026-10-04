@@ -3,7 +3,38 @@
  * exactly — the file IS the data, these types just describe its shape.
  */
 
-export type Role = "data-analyst" | "data-scientist" | "software-engineer";
+/**
+ * The job a simulation is about. Free text so authors can add new tracks
+ * (e.g. "ux-designer"); these are the ones the UI knows how to label.
+ */
+export type Role = string;
+export const KNOWN_ROLES: Record<string, string> = {
+  "data-analyst": "Data Analyst",
+  "data-scientist": "Data Scientist",
+  "ux-designer": "UX Designer",
+  "product-manager": "Product Manager",
+  "software-engineer": "Software Engineer",
+};
+
+/** One section of the write-up the user submits (e.g. "Executive summary"). */
+export interface DeliverableSection {
+  key: string;
+  label: string;
+  hint: string;
+  rows?: number;
+  required?: boolean;
+}
+
+/** The write-up shape used when a case doesn't define its own. */
+export const DEFAULT_DELIVERABLE: DeliverableSection[] = [
+  { key: "executiveSummary", label: "Executive summary", hint: "Two or three sentences leadership can read in ten seconds. Lead with the answer.", rows: 4, required: true },
+  { key: "evidence", label: "Evidence", hint: "The numbers behind each claim, and how you got them.", rows: 8 },
+  { key: "caveats", label: "Caveats", hint: "What you're unsure about and why.", rows: 3 },
+  { key: "recommendation", label: "Recommendation", hint: "What should happen next, and which team owns it.", rows: 4, required: true },
+];
+
+/** A submitted write-up: section key → text. */
+export type Submission = Record<string, string>;
 
 export type ProblemType = "case-study" | "coding";
 
@@ -102,7 +133,14 @@ export interface CaseStudyProblem {
   concepts: Concept[];
   brief: string;
   resources: Array<{ title: string; content: string }>;
-  dataFiles: string[]; // paths relative to this problem's data/ dir
+  /** CSVs for the SQL workbench (paths like "data/users.csv"). Empty = no SQL app. */
+  dataFiles: string[];
+  /** Sections of the write-up. Defaults to DEFAULT_DELIVERABLE. */
+  deliverable?: DeliverableSection[];
+  /** Display name for the company (defaults to the company slug, title-cased). */
+  companyName?: string;
+  /** Slack channel name for the project (defaults to the slug). */
+  channel?: string;
   /**
    * The ground truth. NEVER serialize this to any client-facing payload.
    * Only the evaluator (server-side, with the submission) should ever see it.
@@ -137,6 +175,11 @@ export interface RubricCriterion {
   weak: string;
   /** What a strong answer looks like — anchors the high end. */
   strong: string;
+  /**
+   * Offline grading only (no AI key): groups of regex alternatives. Each
+   * group found in the submission earns points. Ignored by the AI grader.
+   */
+  offlineKeywords?: string[];
 }
 
 export interface Rubric {

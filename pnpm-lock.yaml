@@ -106,6 +106,10 @@ importers:
         version: 5.9.3
 
   packages/content-tools:
+    dependencies:
+      '@casebench/simulation-engine':
+        specifier: workspace:*
+        version: link:../simulation-engine
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -147,6 +151,9 @@ importers:
       '@casebench/domain':
         specifier: workspace:*
         version: link:../domain
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@types/node':
         specifier: ^22.0.0

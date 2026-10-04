@@ -1,40 +1,67 @@
 import "server-only";
 import {
+  bundleFromScenario,
   listAllProblems,
   loadProblemBundle,
   toClientSafe,
   toPublicPersona,
+  validateScenario,
   type ClientSafeProblem,
   type ProblemBundle,
   type PublicPersona,
 } from "@casebench/simulation-engine";
+import { getPool, getScenarioBySlug, listListedScenarios } from "./db";
 
 /**
- * The only way the app should ever read problem content. Pages and API
- * responses get the client-safe view (truth model stripped); the full bundle
- * (truth, agent knowledge, rubric, measured facts) stays on the server.
+ * The only door to problem content. Two sources:
+ *  - official scenarios: files in content/role-packs (curated, in git);
+ *  - Studio scenarios: authored in the app, stored in Postgres, slug "s-…".
+ * Pages and API responses get client-safe views (truth stripped); the full
+ * bundle (truth, agent knowledge, rubric) stays on the server.
  */
-export async function getProblemsForDashboard(): Promise<ClientSafeProblem[]> {
-  const all = await listAllProblems();
-  return all.map(toClientSafe);
+
+export const STUDIO_SLUG_PREFIX = "s-";
+
+export interface CatalogEntry {
+  problem: ClientSafeProblem;
+  source: "official" | "community";
+  authorName?: string | null;
+}
+
+export async function getCatalog(): Promise<CatalogEntry[]> {
+  const official: CatalogEntry[] = (await listAllProblems()).map((p) => ({ problem: toClientSafe(p), source: "official" }));
+  if (process.env.CASEBENCH_COMMUNITY === "off" || !process.env.DATABASE_URL) return official;
+  const community: CatalogEntry[] = [];
+  for (const s of await listListedScenarios(getPool())) {
+    const v = validateScenario(s.bundle);
+    if (v.ok) community.push({ problem: toClientSafe(v.bundle.problem), source: "community", authorName: s.authorName });
+  }
+  return [...official, ...community];
 }
 
 export async function getProblemBySlug(slug: string): Promise<ClientSafeProblem | null> {
-  const all = await getProblemsForDashboard();
-  return all.find((p) => p.slug === slug) ?? null;
+  const bundle = await getBundle(slug);
+  return bundle ? toClientSafe(bundle.problem) : null;
 }
 
-/** Content doesn't change while the server runs, so load each bundle once. */
-const bundles = new Map<string, Promise<ProblemBundle | null>>();
+/** File content doesn't change while the server runs, so load each file bundle once. */
+const fileBundles = new Map<string, Promise<ProblemBundle | null>>();
 
-export function getBundle(slug: string): Promise<ProblemBundle | null> {
-  if (!bundles.has(slug)) {
-    const loading = loadProblemBundle(slug);
-    bundles.set(slug, loading);
-    // Don't remember misses, or requests for random slugs would grow this map forever.
-    void loading.then((b) => b ?? bundles.delete(slug), () => bundles.delete(slug));
+export async function getBundle(slug: string): Promise<ProblemBundle | null> {
+  if (slug.startsWith(STUDIO_SLUG_PREFIX)) {
+    // Studio scenarios can be edited at any time — always read the latest.
+    const stored = await getScenarioBySlug(getPool(), slug);
+    if (!stored) return null;
+    const v = validateScenario(stored.bundle);
+    return v.ok ? bundleFromScenario(v.bundle) : null;
   }
-  return bundles.get(slug)!;
+  if (!fileBundles.has(slug)) {
+    const loading = loadProblemBundle(slug);
+    fileBundles.set(slug, loading);
+    // Don't remember misses, or requests for random slugs would grow this map forever.
+    void loading.then((b) => b ?? fileBundles.delete(slug), () => fileBundles.delete(slug));
+  }
+  return fileBundles.get(slug)!;
 }
 
 export async function getPublicPersonas(slug: string): Promise<PublicPersona[]> {

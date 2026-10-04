@@ -2,16 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { logEvent, submit } from "./api";
-import type { Submission } from "./types";
-
-const EMPTY: Submission = { executiveSummary: "", evidence: "", caveats: "", recommendation: "" };
-
-const FIELDS: Array<{ key: keyof Submission; label: string; hint: string; rows: number }> = [
-  { key: "executiveSummary", label: "Executive summary", hint: "Two or three sentences leadership can read in ten seconds. Lead with the answer.", rows: 4 },
-  { key: "evidence", label: "Evidence", hint: "The numbers behind each claim, and how you got them.", rows: 8 },
-  { key: "caveats", label: "Caveats", hint: "What you're unsure about and why.", rows: 3 },
-  { key: "recommendation", label: "Recommendation", hint: "What should happen next, and which team owns it.", rows: 4 },
-];
+import type { DeliverableSection, Submission } from "./types";
 
 /**
  * The deliverable. Drafts are saved to the event log a few seconds after you
@@ -20,18 +11,22 @@ const FIELDS: Array<{ key: keyof Submission; label: string; hint: string; rows: 
  */
 export function WriteUp({
   runId,
+  sections,
   initial,
   locked,
   onSubmitted,
   onActivity,
 }: {
   runId: string;
+  sections: DeliverableSection[];
   initial: Submission | null;
   locked: boolean;
   onSubmitted: () => void;
   onActivity: () => void;
 }) {
-  const [form, setForm] = useState<Submission>(initial ?? EMPTY);
+  const [form, setForm] = useState<Submission>(
+    () => Object.fromEntries(sections.map((sec) => [sec.key, initial?.[sec.key] ?? ""]))
+  );
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -40,7 +35,7 @@ export function WriteUp({
     if (timer.current) clearTimeout(timer.current);
   }, []);
 
-  function update(key: keyof Submission, value: string) {
+  function update(key: string, value: string) {
     const next = { ...form, [key]: value };
     setForm(next);
     setStatus("Unsaved changes");
@@ -53,8 +48,9 @@ export function WriteUp({
   }
 
   async function send() {
-    if (!form.executiveSummary.trim() || !form.recommendation.trim()) {
-      setStatus("Add at least an executive summary and a recommendation.");
+    const missing = sections.filter((sec) => sec.required && !form[sec.key]?.trim());
+    if (missing.length) {
+      setStatus(`Please fill in: ${missing.map((m) => m.label).join(", ")}.`);
       return;
     }
     if (!confirm("Submit your write-up for review? You can't edit it afterwards.")) return;
@@ -73,13 +69,14 @@ export function WriteUp({
 
   return (
     <div className="writeup">
-      {FIELDS.map((f) => (
+      {sections.map((f) => (
         <label key={f.key}>
           {f.label}
+          {f.required ? " *" : ""}
           <span>{f.hint}</span>
           <textarea
-            rows={f.rows}
-            value={form[f.key]}
+            rows={f.rows ?? 4}
+            value={form[f.key] ?? ""}
             disabled={locked || submitting}
             onChange={(e) => update(f.key, e.target.value)}
           />

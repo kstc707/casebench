@@ -10,6 +10,7 @@ import { Feedback } from "./Feedback";
 import { SqlConsole } from "./SqlConsole";
 import { useChat } from "./useChat";
 import { WriteUp } from "./WriteUp";
+import { DEFAULT_DELIVERABLE, KNOWN_ROLES } from "@casebench/domain";
 import type { ClientSafeCaseStudy, PublicPersona, RunDetail, ScoredEvaluation, Submission } from "./types";
 
 type App = "sql" | "writeup" | "feedback";
@@ -86,6 +87,9 @@ function Workday({
   onRefresh: () => Promise<void>;
 }) {
   const manager = personas.find((p) => p.role === "manager") ?? personas[0];
+  const channel = problem.channel ?? problem.slug;
+  const companyName = problem.companyName ?? titleCase(problem.company);
+  const hasData = problem.dataFiles.length > 0;
   const evaluation = (run.events.find((e) => e.type === "evaluation_returned") as { feedback: ScoredEvaluation } | undefined)?.feedback;
   const finalized = run.events.find((e) => e.type === "submission_finalized") as { submission: Submission } | undefined;
   const lastDraft = [...run.events].reverse().find((e) => e.type === "submission_drafted") as { draft: Submission } | undefined;
@@ -113,20 +117,20 @@ function Workday({
   };
 
   const minutes = Math.max(0, Math.floor((now - Date.parse(run.events[0]?.at ?? new Date().toISOString())) / 60_000));
-  const apps: App[] = evaluation ? ["sql", "writeup", "feedback"] : ["sql", "writeup"];
+  const apps: App[] = [...(hasData ? (["sql"] as App[]) : []), "writeup", ...(evaluation ? (["feedback"] as App[]) : [])];
   const isApp = (a: App) => view.kind === "app" && view.app === a;
 
   return (
     <div className={`app ${view.kind === "app" ? "with-dock" : ""}`}>
       <nav className="sidebar" aria-label="Workspace">
         <div className="ws-name">
-          <strong>StreamWave</strong>
-          <span>Analytics team · {run.status.replace("_", " ")}</span>
+          <strong>{companyName}</strong>
+          <span>{KNOWN_ROLES[problem.role] ?? problem.role} · {run.status.replace("_", " ")}</span>
         </div>
         <div className="nav">
           <h4>Channels</h4>
           <button className={`nav-item ${view.kind === "channel" ? "active" : ""}`} onClick={() => setView({ kind: "channel" })}>
-            <span className="icon">#</span> watch-time-drop
+            <span className="icon">#</span> {channel}
           </button>
           <h4>Direct messages</h4>
           {personas.map((p) => {
@@ -154,7 +158,7 @@ function Workday({
 
       <main className="main">
         <header className="main-head">
-          {view.kind === "channel" && <h2># watch-time-drop</h2>}
+          {view.kind === "channel" && <h2># {channel}</h2>}
           {view.kind === "dm" && (
             <>
               <Avatar persona={persona(view.id)} small />
@@ -167,6 +171,7 @@ function Workday({
         <div className="main-body">
           {view.kind === "channel" && (
             <BriefChannel
+              channel={channel}
               problem={problem}
               manager={manager}
               startedAt={run.events[0]?.at ?? new Date().toISOString()}
@@ -186,12 +191,15 @@ function Workday({
             />
           )}
           {/* The SQL app stays mounted so loaded tables and results survive navigation. */}
-          <div style={{ display: isApp("sql") ? "flex" : "none", flex: 1, minHeight: 0, flexDirection: "column" }}>
-            <SqlConsole runId={run.id} problemSlug={problem.slug} dataFiles={problem.dataFiles} onQueryLogged={bump} />
-          </div>
+          {hasData && (
+            <div style={{ display: isApp("sql") ? "flex" : "none", flex: 1, minHeight: 0, flexDirection: "column" }}>
+              <SqlConsole runId={run.id} problemSlug={problem.slug} dataFiles={problem.dataFiles} onQueryLogged={bump} />
+            </div>
+          )}
           {isApp("writeup") && (
             <WriteUp
               runId={run.id}
+              sections={problem.deliverable ?? DEFAULT_DELIVERABLE}
               initial={finalized?.submission ?? lastDraft?.draft ?? null}
               locked={!!finalized}
               onActivity={bump}
@@ -276,7 +284,9 @@ function StartScreen({
   return (
     <main className="page">
       <Link href="/">← All simulations</Link>
-      <p className="muted" style={{ margin: "24px 0 4px" }}>StreamWave · Analytics team · {problem.estimatedMinutes} min</p>
+      <p className="muted" style={{ margin: "24px 0 4px" }}>
+        {problem.companyName ?? titleCase(problem.company)} · {KNOWN_ROLES[problem.role] ?? problem.role} · {problem.estimatedMinutes} min
+      </p>
       <h1 style={{ margin: 0 }}>{problem.title}</h1>
       <p style={{ maxWidth: 680 }}>{problem.brief}</p>
       <div className="card" style={{ display: "grid", gap: 12, maxWidth: 680 }}>
@@ -300,4 +310,8 @@ function StartScreen({
       {error && <p className="error">{error}</p>}
     </main>
   );
+}
+
+function titleCase(slug: string) {
+  return slug.replace(/(^|-)([a-z])/g, (_, sep: string, c: string) => (sep ? " " : "") + c.toUpperCase());
 }

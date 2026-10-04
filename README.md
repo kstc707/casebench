@@ -22,12 +22,14 @@ Publish it, and you get a shareable portfolio page.
 | **Grader agent** | Structured-output scoring against the hidden truth + measured facts + your query log |
 | **Run event log** | Every action appended to Postgres; published runs frozen by database triggers |
 | **Portfolio page** | Public record: write-up, grade, every query, the Slack conversation |
+| **Scenario Studio** | Anyone can create a simulation for any role (UX, PM, analyst…) in the app, play it, and share it |
 
 ## Start here
 
 - **[How it works](docs/how-the-backend-works.md)** — layers, which file is which, request walkthroughs
 - **[Build log](docs/build-log/README.md)** — every step: what, why, problems hit, how verified, interview notes
 - **[Market research](docs/market-research.md)** — who else does this, and an honest assessment
+- **[Writing a scenario](docs/authoring-scenarios.md)** — for designers, PMs, teachers: create your own case
 - **[Deploy](docs/deploy.md)** — Vercel + Neon + a free AI key, all from the browser
 
 ## Running it
@@ -68,8 +70,8 @@ docs/                     how it works, build log, research, deploy guide, ADRs
 
 ## Status
 
-The data-analyst case is complete end to end. Not yet ported from the prototype: the data
-scientist (experiment readout) and software engineer (coding) tracks. See
+Two official cases (Data Analyst, UX Designer) plus anyone's Studio scenarios. Not yet ported from
+the prototype: the data scientist (experiment readout) and software engineer (coding) tracks. See
 [`docs/roadmap.md`](docs/roadmap.md).
 
 ## License

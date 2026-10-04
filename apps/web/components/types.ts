@@ -1,8 +1,8 @@
-import type { RunEvent, RunStatus } from "@casebench/domain";
+import type { DeliverableSection, RunEvent, RunStatus } from "@casebench/domain";
 import type { ClientSafeCaseStudy, PublicPersona } from "@casebench/simulation-engine";
 import type { ScoredEvaluation, Submission } from "@casebench/agents";
 
-export type { RunEvent, RunStatus, ClientSafeCaseStudy, PublicPersona, ScoredEvaluation, Submission };
+export type { DeliverableSection, RunEvent, RunStatus, ClientSafeCaseStudy, PublicPersona, ScoredEvaluation, Submission };
 
 export interface RunDetail {
   id: string;

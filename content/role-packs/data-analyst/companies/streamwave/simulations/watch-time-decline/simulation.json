@@ -3,15 +3,32 @@
   "slug": "watch-time-decline",
   "role": "data-analyst",
   "company": "streamwave",
+  "companyName": "StreamWave",
+  "channel": "watch-time-drop",
   "title": "Why is watch time declining?",
   "difficulty": "medium",
   "estimatedMinutes": 90,
   "concepts": [
-    { "name": "Data quality & deduplication", "blurb": "Event logs double-count. Find and remove re-sent events before trusting any trend." },
-    { "name": "Mix shift (composition effects)", "blurb": "An average can fall because WHO is in it changed, not because anyone behaves differently." },
-    { "name": "Segmentation", "blurb": "Split by cohort, device, and experiment arm to see where the change actually lives." },
-    { "name": "Correlation vs. causation", "blurb": "Three things changed on the same day. Separate them before blaming one." },
-    { "name": "Executive communication", "blurb": "Turn the analysis into a decision: what happened, how sure you are, who acts next." }
+    {
+      "name": "Data quality & deduplication",
+      "blurb": "Event logs double-count. Find and remove re-sent events before trusting any trend."
+    },
+    {
+      "name": "Mix shift (composition effects)",
+      "blurb": "An average can fall because WHO is in it changed, not because anyone behaves differently."
+    },
+    {
+      "name": "Segmentation",
+      "blurb": "Split by cohort, device, and experiment arm to see where the change actually lives."
+    },
+    {
+      "name": "Correlation vs. causation",
+      "blurb": "Three things changed on the same day. Separate them before blaming one."
+    },
+    {
+      "name": "Executive communication",
+      "blurb": "Turn the analysis into a decision: what happened, how sure you are, who acts next."
+    }
   ],
   "brief": "Weekly watch time per active user is down about 21% when I compare the last four weeks (Aug 3–30) to the four weeks before (Jul 6–Aug 2). Sign-ups are actually up, which makes this more confusing. Leadership meets Thursday and wants to know whether this is a real engagement problem and which team should act. You have users, sessions, content, subscriptions, experiments, and marketing_campaigns. Dig in and send me your findings and a recommendation.",
   "resources": [
@@ -39,11 +56,28 @@
   "truthModel_INTERNAL_DO_NOT_EXPOSE_TO_USER": {
     "summary": "The -21.5% headline decline is three things that all started on Aug 3. (1) Measurement artifact: mobile app 5.2.0 re-sent ~34% of mobile play events (duplicate rows seconds apart, new session_id); 5.3.0 fixed it on Aug 3, so the BEFORE period was inflated. Deduplicating shrinks the decline to about -13.8%. (2) Mix shift: the 'Summer Free Month' paid_social campaign (Aug 3-30) added young, mobile-heavy trial users who watch ~47 min/week vs ~128 for existing users; they are ~15% of active users in weeks 5-8. Existing users in the experiment control arm are flat (-0.8%). (3) Small real product effect: experiment autoplay_next_v2 (existing users, from Aug 3) turned autoplay off for the treatment arm, cutting TV minutes per session from ~59 to ~49; existing treatment users are down ~10% while control is flat.",
     "drivers": [
-      { "name": "Duplicate mobile events before Aug 3", "approxShareOfHeadline": "~8 of 21.5 points", "evidence": "Rows with same user_id + content_id + device within 120s, all app_version 5.2.0, none after Aug 3 except chance collisions." },
-      { "name": "Campaign acquisition mix", "approxShareOfHeadline": "largest real driver, ~9 points", "evidence": "paid_social users signed up Aug 3-30; far lower minutes per active user; existing control users flat." },
-      { "name": "autoplay_next_v2 treatment arm", "approxShareOfHeadline": "~4-5 points", "evidence": "Treatment vs control among existing users; effect concentrated on TV." }
+      {
+        "name": "Duplicate mobile events before Aug 3",
+        "approxShareOfHeadline": "~8 of 21.5 points",
+        "evidence": "Rows with same user_id + content_id + device within 120s, all app_version 5.2.0, none after Aug 3 except chance collisions."
+      },
+      {
+        "name": "Campaign acquisition mix",
+        "approxShareOfHeadline": "largest real driver, ~9 points",
+        "evidence": "paid_social users signed up Aug 3-30; far lower minutes per active user; existing control users flat."
+      },
+      {
+        "name": "autoplay_next_v2 treatment arm",
+        "approxShareOfHeadline": "~4-5 points",
+        "evidence": "Treatment vs control among existing users; effect concentrated on TV."
+      }
     ],
-    "redHerrings": ["plan label casing (basic vs Basic) from a billing migration", "missing genre labels", "home_row_ranking experiment (finished in May)", "web/TV releases"],
+    "redHerrings": [
+      "plan label casing (basic vs Basic) from a billing migration",
+      "missing genre labels",
+      "home_row_ranking experiment (finished in May)",
+      "web/TV releases"
+    ],
     "acceptanceNote": "A strong answer separates measurement artifact from behaviour change, quantifies each driver at least roughly, notices existing users are roughly flat, and recommends: fix the dashboard metric (dedupe / annotate), report engagement by acquisition cohort, and review autoplay_next_v2 before rollout. Well-supported alternative framings with caveats can still score high; this is not keyword matching."
   }
 }

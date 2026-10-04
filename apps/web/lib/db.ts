@@ -8,4 +8,12 @@ export {
   publishRun,
   getPublishedRun,
   isUniqueViolation,
+  createScenario,
+  getScenarioForAuthor,
+  getScenarioBySlug,
+  updateScenario,
+  deleteScenario,
+  listMyScenarios,
+  listListedScenarios,
+  ScenarioNotFoundError,
 } from "@casebench/database";
