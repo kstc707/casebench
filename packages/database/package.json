@@ -2,7 +2,19 @@
   "name": "@casebench/database",
   "version": "0.1.0",
   "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
-    "migrate": "psql \"$DATABASE_URL\" -f schema.sql"
+    "migrate": "node scripts/migrate.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@casebench/domain": "workspace:*",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.23.1",
+    "typescript": "^5.6.0"
   }
 }

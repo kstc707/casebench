@@ -29,9 +29,10 @@ Two things exist side by side right now:
    [`docs/architecture.md`](docs/architecture.md) — see
    [`docs/adr/0001-rebuild-modular-app.md`](docs/adr/0001-rebuild-modular-app.md) for why this
    exists as a separate rebuild rather than an edit to the prototype. Currently scaffolded:
-   domain entities + event-log state machine, Postgres schema with immutability triggers, an AI
-   provider abstraction (server-side this time), a content loader that strips the hidden truth
-   model before anything reaches the client, and a dashboard + stub problem page. Not yet ported:
+   domain entities + event-log state machine, Postgres migrations with immutability triggers,
+   a run API backed by Postgres (start/resume a run, append events), an AI provider abstraction
+   (server-side this time), a content loader that strips the hidden truth model before anything
+   reaches the client, and a dashboard + problem page with start/resume. Not yet ported:
    the data explorer, manager chat, code editor, and the actual submission/evaluation flow — see
    [`docs/roadmap.md`](docs/roadmap.md) for the current checklist.
 
@@ -55,7 +56,7 @@ casebench/
   apps/web/              — Next.js app (dashboard + problem pages)
   packages/
     domain/              — core types + the event-log run state machine
-    database/            — Postgres schema (schema.sql) with immutability triggers
+    database/            — Postgres migrations, migration runner, run repository
     ai/                  — AI provider abstraction + manager/evaluator prompt builders
     simulation-engine/    — loads content/role-packs/*, strips truth model before client exposure
   content/role-packs/    — content-as-data: manager personas, case studies, rubrics, coding problems
@@ -69,11 +70,35 @@ casebench/
 
 ```bash
 pnpm install
-pnpm --filter @casebench/web dev
+createdb casebench
+cp .env.example apps/web/.env.local     # then set DATABASE_URL
+DATABASE_URL=postgres://localhost/casebench pnpm db:migrate
+pnpm dev
 ```
 
-Postgres isn't wired into the app yet (see roadmap) — `packages/database/schema.sql` can be
-applied manually per that package's README if you want to experiment with it ahead of time.
+**Tests:** `pnpm test`. The database integration tests run only when `TEST_DATABASE_URL`
+points at a migrated Postgres database (CI does this); otherwise they're skipped.
+
+### API (run backbone)
+
+Every attempt at a problem is a *run*, stored as an append-only event log. Users are
+identified by an anonymous cookie until accounts exist; runs are only visible to their owner.
+
+| Method | Path | Does |
+|---|---|---|
+| `GET` | `/api/runs[?problemSlug=]` | List your runs, newest first |
+| `POST` | `/api/runs` `{ problemSlug }` | Start a run |
+| `GET` | `/api/runs/:id` | A run with its full event log |
+| `POST` | `/api/runs/:id/events` `{ type, ... }` | Append `brief_viewed`, `resource_opened`, or `submission_drafted` (409 if the state machine rejects it) |
+
+Manager messages, submission, evaluation, and publishing are deliberately not client-postable:
+they'll be produced server-side by their own routes, so a browser can't post its own grade.
+
+### Deploying
+
+Vercel (project root `apps/web`) + any hosted Postgres (Neon, Supabase). Set `DATABASE_URL`
+in Vercel, run `pnpm db:migrate` against it once per new migration, and deploy. Role-pack
+content ships with the app via `outputFileTracingIncludes` in `apps/web/next.config.js`.
 
 ## Contributing
 

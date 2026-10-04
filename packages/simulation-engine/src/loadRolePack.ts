@@ -1,8 +1,21 @@
+import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import type { CaseStudyProblem, CodingProblem, Problem } from "@casebench/domain";
 
-const CONTENT_ROOT = path.resolve(process.cwd(), "../../content/role-packs");
+/**
+ * Where content/role-packs lives. CASEBENCH_CONTENT_ROOT wins if set;
+ * otherwise look relative to the working directory, which is the repo root
+ * for tests/scripts and apps/web for `next dev` / `next start` / Vercel.
+ */
+function resolveContentRoot(): string {
+  if (process.env.CASEBENCH_CONTENT_ROOT) return process.env.CASEBENCH_CONTENT_ROOT;
+  const candidates = [
+    path.resolve(process.cwd(), "content/role-packs"),
+    path.resolve(process.cwd(), "../../content/role-packs"),
+  ];
+  return candidates.find((dir) => existsSync(dir)) ?? candidates[candidates.length - 1];
+}
 
 /**
  * The client-safe view of a case study — everything except the truth model.
@@ -34,10 +47,11 @@ export function toClientSafe(problem: Problem): ClientSafeProblem {
  */
 export async function listAllProblems(): Promise<Problem[]> {
   const problems: Problem[] = [];
-  const roles = await readdir(CONTENT_ROOT, { withFileTypes: true });
+  const contentRoot = resolveContentRoot();
+  const roles = await readdir(contentRoot, { withFileTypes: true });
 
   for (const roleDir of roles.filter((d) => d.isDirectory())) {
-    const companiesRoot = path.join(CONTENT_ROOT, roleDir.name, "companies");
+    const companiesRoot = path.join(contentRoot, roleDir.name, "companies");
     const companies = await safeReaddir(companiesRoot);
 
     for (const companyDir of companies) {

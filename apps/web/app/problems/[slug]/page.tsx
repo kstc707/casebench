@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { getProblemBySlug } from "../../../lib/problems";
+import { RunPanel } from "../../../components/RunPanel";
 
-export default async function ProblemPage({ params }: { params: { slug: string } }) {
-  const problem = await getProblemBySlug(params.slug);
+export default async function ProblemPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const problem = await getProblemBySlug(slug);
   if (!problem) return notFound();
 
   return (
@@ -11,6 +13,8 @@ export default async function ProblemPage({ params }: { params: { slug: string }
       <p>
         {problem.role} · {problem.type} · {problem.difficulty} · {problem.estimatedMinutes} min
       </p>
+
+      <RunPanel problemSlug={problem.slug} />
 
       {problem.type === "case-study" ? (
         <section>

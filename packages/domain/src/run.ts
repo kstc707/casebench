@@ -39,7 +39,7 @@ export interface Run {
  * immutable), which matters for the portfolio feature: a shared result
  * should reflect a frozen run, not one someone kept editing after seeing
  * their grade. The Postgres schema enforces this too (see
- * packages/database/schema.sql), this is the in-app mirror of that rule.
+ * packages/database/migrations/0001_init.sql), this is the in-app mirror of that rule.
  */
 const ALLOWED_TRANSITIONS: Record<RunStatus, RunStatus[]> = {
   started: ["in_progress"],
@@ -89,7 +89,10 @@ export function appendEvent(run: Run, event: RunEvent): Run {
   }
 
   const allowed = ALLOWED_TRANSITIONS[run.status];
-  if (!allowed.includes(nextStatus) && nextStatus !== run.status) {
+  // Same-status events are only legal where ALLOWED_TRANSITIONS says so
+  // (in_progress -> in_progress). Without this, e.g. a second run_started
+  // or a duplicate submission_finalized would slip through.
+  if (!allowed.includes(nextStatus)) {
     throw new IllegalTransitionError(run.status, nextStatus);
   }
 

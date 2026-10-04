@@ -26,8 +26,9 @@
 - [ ] Wire up the submission + evaluation flow end-to-end (case-study and coding)
 - [ ] Add the second role-pack content (data-scientist/experiment-readout,
       software-engineer/dedupe-session-events) using the same structure
-- [ ] Set up Postgres locally/in CI and wire `packages/database` into the app for real run
-      persistence (currently there's no persistence layer wired up yet)
+- [x] Wire Postgres into the app: numbered migrations + runner, run repository with row-locked
+      appends, `/api/runs` routes, anonymous cookie identity, start/resume on the problem page,
+      CI with a Postgres service (typecheck, tests, build)
 - [ ] Account system + persistent portfolio (currently a single in-session run)
 - [ ] More companies/role tracks beyond the current StreamWave-based set
 - [ ] Decide on a stable product name (working names so far: "Project Codename", "Casebench")
