@@ -46,6 +46,8 @@ Two things exist side by side right now:
 casebench/
   README.md / LICENSE / CONTRIBUTING.md
   docs/
+    how-the-backend-works.md — start here: layers, which file is which, request walkthrough
+    build-log/           — step-by-step record of how the app was built, with interview notes
     architecture.md      — design notes: event-log state machine, content-as-data role packs,
                             hybrid deterministic+AI evaluation, anti-leakage prompt design
     concept-brief.md     — self-contained conceptual overview (written for AI handoff)
