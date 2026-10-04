@@ -9,3 +9,4 @@ build/
 apps/web/next-env.d.ts
 *.tsbuildinfo
 apps/web/public/duckdb/
+review-pack.md

@@ -8,7 +8,8 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
-    "db:migrate": "pnpm --filter @casebench/database migrate"
+    "db:migrate": "pnpm --filter @casebench/database migrate",
+    "review-pack": "node scripts/review-pack.mjs"
   },
   "devDependencies": {
     "tsx": "^4.23.15",
