@@ -30,6 +30,7 @@ Publish it, and you get a shareable portfolio page.
 - **[Build log](docs/build-log/README.md)** — every step: what, why, problems hit, how verified, interview notes
 - **[Market research](docs/market-research.md)** — who else does this, and an honest assessment
 - **[Writing a scenario](docs/authoring-scenarios.md)** — for designers, PMs, teachers: create your own case
+- **[Review pack](docs/review-pack-lite.md)** — the whole project in one file for an outside reviewer or AI chat ([full version with code](docs/review-pack.md); regenerate with `pnpm review-pack`)
 - **[Deploy](docs/deploy.md)** — Vercel + Neon + a free AI key, all from the browser
 
 ## Running it

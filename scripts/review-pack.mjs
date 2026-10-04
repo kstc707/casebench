@@ -14,6 +14,7 @@ const out = process.argv.slice(2).find((a) => !a.startsWith("--")) ?? "review-pa
 const files = execSync("git ls-files", { encoding: "utf-8" }).trim().split("\n");
 
 const skip = (f) =>
+  /^docs\/review-pack/.test(f) || // never pack an old pack
   /(^|\/)(pnpm-lock\.yaml|LICENSE)$/.test(f) ||
   f.endsWith(".csv") ||
   f.startsWith("prototype/") ||
@@ -28,7 +29,7 @@ const docsFirst = [
   "docs/deploy.md",
   "docs/roadmap.md",
   ...files.filter((f) => f.startsWith("docs/build-log/")).sort(),
-];
+].filter((f) => !skip(f));
 const code = files.filter(
   (f) => !skip(f) && !docsFirst.includes(f) && /\.(ts|tsx|mjs|js|sql|json|css|yml|md)$/.test(f) && !f.startsWith("docs/")
 );
@@ -63,7 +64,7 @@ let md = PROMPT;
 for (const f of docsFirst.filter((f) => files.includes(f))) {
   md += `\n\n<!-- FILE: ${f} -->\n\n${readFileSync(f, "utf-8")}\n`;
 }
-md += `\n\n---\n\n# File tree\n\n\`\`\`\n${files.filter((f) => !f.startsWith(".github/ISSUE")).join("\n")}\n\`\`\`\n\n# Source code\n`;
+md += `\n\n---\n\n# File tree\n\n\`\`\`\n${files.filter((f) => !f.startsWith(".github/ISSUE") && !/^docs\/review-pack/.test(f)).join("\n")}\n\`\`\`\n\n# Source code\n`;
 if (lite) md += "\n_Lite pack: source code omitted. Base code claims only on the docs above._\n";
 for (const f of lite ? [] : code) {
   md += `\n## \`${f}\`\n\n\`\`\`${lang(f)}\n${readFileSync(f, "utf-8").trimEnd()}\n\`\`\`\n`;

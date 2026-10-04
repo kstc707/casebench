@@ -9,7 +9,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "db:migrate": "pnpm --filter @casebench/database migrate",
-    "review-pack": "node scripts/review-pack.mjs"
+    "review-pack": "node scripts/review-pack.mjs docs/review-pack.md && node scripts/review-pack.mjs docs/review-pack-lite.md --lite"
   },
   "devDependencies": {
     "tsx": "^4.23.15",
