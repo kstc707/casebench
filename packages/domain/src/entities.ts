@@ -68,10 +68,15 @@ export interface RubricCriterion {
   label: string;
   description: string;
   weight: number;
+  /** What a weak answer looks like — anchors the evaluator's low end. */
+  weak: string;
+  /** What a strong answer looks like — anchors the high end. */
+  strong: string;
 }
 
 export interface Rubric {
   problemSlug: string;
+  scale: { min: number; max: number };
   criteria: RubricCriterion[];
 }
 

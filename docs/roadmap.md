@@ -18,9 +18,8 @@
       event-log state machine, Postgres schema + immutability triggers, AI provider abstraction,
       content loader with truth-model stripping, dashboard + stub problem page (see
       `docs/adr/0001-rebuild-modular-app.md`)
-- [ ] Replace the placeholder watch-time-decline data/truth-model with a real, internally
-      consistent dataset (see that simulation's `data/NOTE.md`) — planned as a Python generator
-      + validator that proves the truth model actually holds in the generated data
+- [x] Replace the placeholder watch-time-decline data/truth model with a seeded generator +
+      independent analyzer + tests proving the truth model holds (build log 02)
 - [ ] Port the data explorer / SQL sandbox from the prototype into the problem page
 - [ ] Port the manager chat (using `packages/ai`'s prompt builders) into the problem page
 - [ ] Port the code editor + deterministic test runner for the coding track

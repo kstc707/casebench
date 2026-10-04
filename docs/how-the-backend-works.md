@@ -10,18 +10,13 @@ The browser talks to **API routes** (small server functions in the Next.js app),
 the **rules** from the domain package and save the result in **Postgres** through the database
 package — and the hidden answer to each case study never leaves the server.
 
-## Languages: why TypeScript and not Python (yet)
+## Languages: why everything is TypeScript
 
-The whole app — frontend *and* backend — is TypeScript. Next.js lets one codebase serve both
-the pages and the server code (`app/api/...`), and Vercel deploys that as a single unit. Using
-one language means the same type (e.g. `RunEvent`) is checked on both sides, and there's one
-toolchain to install, test, and deploy.
-
-Python has a clear future home here: the **data/content pipeline** — generating realistic,
-deliberately messy datasets for each case study and *verifying* that the hidden truth model is
-actually true in that data. That work runs offline (before deploy), produces CSV/JSON files in
-`content/`, and is exactly the kind of data work Python is best at. See the
-[roadmap](roadmap.md).
+The whole app — frontend, backend, and the dataset generator — is TypeScript. Next.js lets one
+codebase serve both the pages and the server code (`app/api/...`), and Vercel deploys that as a
+single unit. One language means the same type (e.g. `RunEvent`) is checked on both sides, and
+there's one toolchain to install, test, and deploy. Python would be a natural fit for the data
+generator, but it would add a second toolchain for one script — see build log 02.
 
 ## The layers
 

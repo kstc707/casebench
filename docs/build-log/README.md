@@ -18,3 +18,4 @@ if you want the big picture first.
 | # | Step | Branch / PR |
 |---|---|---|
 | 01 | [Run backbone: Postgres + API routes](01-run-backbone.md) | `claude/backbone-runs-api` |
+| 02 | [StreamWave dataset with a provable hidden truth](02-streamwave-dataset.md) | `claude/backbone-runs-api` |

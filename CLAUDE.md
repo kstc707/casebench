@@ -18,7 +18,7 @@ terms on first use, prefer plain language, and point to exact files.
 ## Conventions
 
 - TypeScript for the app (Next.js in `apps/web`, shared code in `packages/*`).
-- Python is for offline data/content generation and validation under `content/` tooling.
+- Content generation/validation lives in `packages/content-tools` (TypeScript, seeded, tested).
 - Database changes are new numbered files in `packages/database/migrations/` — never edit an
   applied migration.
 - The case-study truth model must never reach the client; keep the leak test passing.
