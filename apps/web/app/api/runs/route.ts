@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPool, insertRun, listRuns } from "../../../lib/db";
 import { getProblemBySlug } from "../../../lib/problems";
 import { getUserId } from "../../../lib/session";
+import { fireDueTriggers } from "../../../lib/agents";
 import { handleRouteError, jsonError, readJsonBody } from "../../../lib/api";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ export async function POST(req: Request) {
 
     const userId = await getUserId();
     const run = await insertRun(getPool(), problem.slug, userId);
+    // The manager's kickoff message is waiting the moment the workspace opens.
+    await fireDueTriggers(run.id, userId);
     return NextResponse.json({ run }, { status: 201 });
   } catch (err) {
     return handleRouteError(err);

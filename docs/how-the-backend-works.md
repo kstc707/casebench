@@ -1,135 +1,172 @@
-# How the backend works
+# How Casebench works
 
-A plain-language map of Casebench's backend: what each piece is, where its file is, and what
-happens when you click a button. Read this first; the [build log](build-log/README.md) then
+A plain-language map of the whole system: what each piece is, where its file is, and what
+happens when you click something. Read this first; the [build log](build-log/README.md) then
 explains how and why each piece was added, step by step.
 
-## The one-sentence version
+## The one-paragraph version
 
-The browser talks to **API routes** (small server functions in the Next.js app), which apply
-the **rules** from the domain package and save the result in **Postgres** through the database
-package — and the hidden answer to each case study never leaves the server.
+You get a messy work assignment. You query real-looking data with SQL **in your browser**. Every
+action you take is appended to an **event log** in Postgres. **AI coworkers** (a manager and a
+data engineer) watch that log: code decides *when* one should message you, a model writes *what*
+they say, and a leak guard stops them giving the answer away. When you submit, a **grader agent**
+scores your write-up against the **hidden truth** — facts measured from the very data you saw —
+and against what you actually did. Publishing freezes the run and creates a public portfolio page.
 
-## Languages: why everything is TypeScript
+## Languages and tools
 
-The whole app — frontend, backend, and the dataset generator — is TypeScript. Next.js lets one
-codebase serve both the pages and the server code (`app/api/...`), and Vercel deploys that as a
-single unit. One language means the same type (e.g. `RunEvent`) is checked on both sides, and
-there's one toolchain to install, test, and deploy. Python would be a natural fit for the data
-generator, but it would add a second toolchain for one script — see build log 02.
+Everything is **TypeScript**: the Next.js app (pages + API routes), the shared packages, and the
+dataset generator. One language means shared types end to end and one toolchain. Postgres stores
+runs. DuckDB-WASM runs SQL in the browser. Claude (via the official Anthropic SDK) powers the
+agents and the grader; an offline mock stands in when there's no API key.
 
 ## The layers
 
 ```
- Browser (React)                       apps/web/components/, apps/web/app/**/page.tsx
-     │  fetch("/api/runs", ...)
-     ▼
- API routes  ── "the front door"       apps/web/app/api/**/route.ts
-     │  checks input, figures out who you are
-     ▼
- Domain rules ── "the referee"         packages/domain/src/run.ts
-     │  is this step allowed right now?
-     ▼
- Repository ── "the filing clerk"      packages/database/src/runs.ts
-     │  SQL, transactions, row locks
-     ▼
- Postgres ── "the vault"               packages/database/migrations/0001_init.sql
-        tables + triggers that refuse to edit a published run
-```
+ Browser                     apps/web/components/*        Workspace, SQL console (DuckDB), Slack, write-up
+   │ fetch /api/...
+   ▼
+ API routes                  apps/web/app/api/**/route.ts  validate input, identify user, call below
+   │
+   ├─► Orchestrator          apps/web/lib/agents.ts        when to run agents; store their messages
+   │      │
+   │      ├─► Agent engine   packages/agents               triggers, hints, prompts, leak guard, grader
+   │      └─► AI provider    packages/ai                   Claude (SDK) or offline mock
+   │
+   ├─► Content loader        packages/simulation-engine    reads content/, strips secrets for the browser
+   │
+   ├─► Domain rules          packages/domain               run state machine + all shared types
+   │
+   └─► Repository            packages/database             SQL, transactions, row locks
+          ▼
+       Postgres              packages/database/migrations  tables + triggers (published = frozen)
 
-Each layer only talks to the one below it. That's what lets each one be tested on its own.
+ Offline tooling             packages/content-tools        generates + verifies the case's dataset
+```
 
 ## Which file is which
 
-| File | Layer | What it does |
+### Browser (`apps/web/components/`)
+
+| File | What it does |
+|---|---|
+| `Workspace.tsx` | Three panes: brief/tables · SQL/write-up/feedback · Slack. Start screen. |
+| `SqlConsole.tsx` + `duckdb.ts` | DuckDB in a Web Worker; loads CSVs as tables; logs each query |
+| `SlackPanel.tsx` | DMs with each coworker; polls every 4 s; unread badges |
+| `WriteUp.tsx` | The deliverable; autosaves drafts; submits for grading |
+| `Feedback.tsx` | Score, per-criterion reasons, publish button |
+| `api.ts` | Every call the browser makes to the server |
+
+### Server (`apps/web/app/api/` and `apps/web/lib/`)
+
+| Route / file | What it does |
+|---|---|
+| `GET/POST /api/runs` | List your runs / start one (Priya's kickoff fires immediately) |
+| `GET /api/runs/:id` | A run with its full event log (owner only) |
+| `POST /api/runs/:id/events` | Log brief viewed / resource opened / **query run** / draft saved; then agents may react |
+| `GET/POST /api/runs/:id/messages` | Slack history (+ time-based triggers) / message a coworker and get a reply |
+| `POST /api/runs/:id/submit` | Freeze the write-up, grade it, manager reacts (retry-safe) |
+| `POST /api/runs/:id/publish` | Freeze the run, create the portfolio entry |
+| `GET /api/problems/:slug/data/:file` | Serve a CSV — only files listed in the case's `dataFiles` |
+| `/portfolio/:runId` (page) | Public record of a published run |
+| `lib/agents.ts` | The orchestrator (fire triggers, reply, post-evaluation reaction) |
+| `lib/session.ts` | Anonymous identity cookie |
+| `lib/runEvents.ts` | Validates what a browser may log (allow-list) |
+| `lib/problems.ts` | The only door to content; client-safe views + server-only bundles |
+
+### Packages
+
+| Package | Key files | Responsibility |
 |---|---|---|
-| `apps/web/app/api/runs/route.ts` | API | `GET` lists your runs; `POST` starts a new one |
-| `apps/web/app/api/runs/[id]/route.ts` | API | `GET` one run with its full history |
-| `apps/web/app/api/runs/[id]/events/route.ts` | API | `POST` logs an action (e.g. "opened the data dictionary") |
-| `apps/web/lib/session.ts` | API helper | Who is this? Reads/creates the anonymous `cb_uid` cookie |
-| `apps/web/lib/runEvents.ts` | API helper | Validates untrusted input; decides which actions a browser may log |
-| `apps/web/lib/api.ts` | API helper | Turns errors into HTTP status codes (404, 409, 500) |
-| `apps/web/lib/problems.ts` | API helper | The only way the app reads problem content — always truth-stripped |
-| `apps/web/lib/db.ts` | API helper | Server-only doorway to the database package |
-| `packages/domain/src/run.ts` | Domain | The state machine: which status changes are legal |
-| `packages/domain/src/entities.ts` | Domain | Types for problems, personas, rubrics |
-| `packages/database/src/runs.ts` | Repository | `insertRun`, `getRun`, `listRuns`, `appendRunEvent` |
-| `packages/database/src/pool.ts` | Repository | One shared connection pool per server process |
-| `packages/database/migrations/*.sql` | Database | Table definitions and triggers, applied in order |
-| `packages/database/scripts/migrate.mjs` | Database | Applies migrations that haven't run yet |
-| `packages/simulation-engine/src/loadRolePack.ts` | Content | Reads `content/role-packs/`, strips the truth model |
-| `packages/ai/src/*` | AI | Manager/evaluator prompts + provider (not wired in yet) |
-| `apps/web/components/RunPanel.tsx` | Frontend | The "Start this problem" box |
+| `domain` | `run.ts`, `entities.ts` | Event types, the run state machine, content/agent types |
+| `database` | `src/runs.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
+| `agents` | `triggers.ts`, `hints.ts`, `prompt.ts`, `respond.ts`, `guard.ts`, `evaluator.ts` | The agent engine and the grader |
+| `ai` | `anthropicProvider.ts`, `mockProvider.ts`, `config.ts` | Model calls; model choice; offline mode |
+| `simulation-engine` | `loadRolePack.ts` | Load cases, personas, agents, rubric; strip secrets |
+| `content-tools` | `streamwave.ts`, `analyzeStreamwave.ts` | Seeded data generator + independent analyzer |
+
+### Content (`content/role-packs/data-analyst/companies/streamwave/`)
+
+| File | Goes to the browser? | What |
+|---|---|---|
+| `personas/*.json` | name/title/colour only | Who the coworkers are, how they write |
+| `simulations/watch-time-decline/simulation.json` | yes, **minus the truth model** | Brief, resources, concepts, data file list |
+| `…/data/*.csv` | yes | The six tables |
+| `…/agents.json` | **never** | What each agent knows, hint levels, triggers, leak guards |
+| `…/rubric.json` | labels only | Criteria with weak/strong anchors |
+| `…/analysis.json` | **never** | Facts measured from the CSVs, for the grader |
 
 ## Key concepts
 
-**Run.** One attempt at one problem by one user. It has a **status**:
+**Run** — one attempt at one problem. Status moves
+`started → in_progress → submitted → evaluated → published`. Published runs are frozen by
+Postgres triggers.
 
-```
-started ──► in_progress ──► submitted ──► evaluated ──► published
-                 ▲   │                                      (frozen forever)
-                 └───┘ (any number of in-progress actions)
-```
+**Event log** — a run is a list of things that happened, only ever appended:
+`run_started`, `brief_viewed`, `resource_opened`, `query_run`, `message_sent`,
+`message_received`, `submission_drafted`, `submission_finalized`, `evaluation_returned`,
+`run_published`. Chat messages don't change the status.
 
-**Event log.** A run isn't one row that gets overwritten — it's a list of things that happened
-(`run_started`, `brief_viewed`, `resource_opened`, …), only ever appended to. The status is
-just "where the latest event put us". This gives a full, replayable history of every attempt,
-which is what the evaluator and the portfolio writeup will read later.
+**Trigger** — a rule in `agents.json` for when a coworker speaks up on their own (e.g. Sam, the
+first time you query `sessions`). Each fires at most once per run.
 
-**Truth model.** The hidden answer to a case study (e.g. "the watch-time drop is partly a
-duplicate-event bug"). Only the server — and later the AI evaluator — ever sees it.
+**Hint level** — how much an agent may help right now; unlocks with time spent or questions
+asked, computed in code.
 
-## Walkthrough: what happens when you click "Start this problem"
+**Leak guard** — a regex check on every agent reply; if it reveals something you haven't raised
+yourself, it's replaced and flagged.
 
-1. **Browser** (`RunPanel.tsx`) sends `POST /api/runs` with `{ "problemSlug": "watch-time-decline" }`.
-2. **API route** (`app/api/runs/route.ts`):
-   - checks the body is valid and the problem exists (`lib/problems.ts`) → else `400`/`404`;
-   - gets your user id from the cookie, creating one if this is your first visit (`lib/session.ts`).
-3. **Repository** (`insertRun` in `packages/database/src/runs.ts`) asks the **domain**
-   (`createRun`) for a new run with its first event, then inside one **transaction** inserts the
-   `runs` row and the `run_started` event — both are saved, or neither is.
-4. Browser immediately sends `POST /api/runs/<id>/events` with `{ "type": "brief_viewed" }`.
-5. **API route** (`events/route.ts`) validates it (`parseClientEvent`) and stamps the time on the
-   server — a client can't backdate events.
-6. **Repository** (`appendRunEvent`):
-   1. `begin` a transaction;
-   2. `select ... for update` — **locks** this run's row so a second request for the same run
-      has to wait its turn;
-   3. asks the **domain** (`appendEvent`) whether `started → in_progress` is legal — it is;
-   4. inserts the event, updates the status, `commit`.
-7. **Postgres triggers** double-check: if this run were already `published`, the database itself
-   would refuse the insert, even if the app code had a bug.
-8. Browser shows `status in_progress`. Reload the page and `GET /api/runs?problemSlug=...` finds
-   the same run, so you resume where you left off.
+**Truth model + measured facts** — the hidden answer, and the numbers that prove it, given only to
+the grader.
 
-## How a bad request is stopped (defence in depth)
+## Walkthrough: one query, end to end
 
-| Attempt | Stopped by | Response |
-|---|---|---|
-| Malformed JSON / missing fields | `parseClientEvent`, route checks | `400` |
-| Browser tries to post its own grade (`evaluation_returned`) | allow-list in `lib/runEvents.ts` | `400` |
-| Someone else's run id, or a made-up id | `user_id` filter in every query | `404` (same as "doesn't exist", so ids can't be probed) |
-| An action that's illegal right now (e.g. editing after submitting) | domain state machine | `409` |
-| Two submissions racing at the same instant | row lock (`for update`) | one wins, one gets `409` |
-| A bug that skips all of the above on a published run | Postgres triggers | database error |
+1. You run `SELECT device, app_version, COUNT(*) FROM sessions GROUP BY 1,2` → DuckDB answers in
+   your browser in ~10 ms.
+2. `SqlConsole` posts `{type: "query_run", sql, rowCount: 4}` to `/api/runs/<id>/events`.
+3. The route validates it (`parseClientEvent`), stamps the time, and `appendRunEvent` locks the
+   run row, checks the state machine, and inserts the event.
+4. The response returns; then Next's `after()` calls `fireDueTriggers`:
+   - `dueTriggers` sees two new matches: `sam-hello` (query mentions `sessions`) and
+     `sam-app-versions` (mentions `app_version`);
+   - `sam-hello` has fixed text → posted as `message_received` with `trigger: "sam-hello"`;
+   - `sam-app-versions` has a prompt → `generateAgentMessage` builds Sam's system prompt (persona,
+     knowledge, hint policy) and a user turn (activity log, transcript, hint level, instruction),
+     calls the small model, runs the leak guard, and posts the result.
+5. Within 4 s, the Slack panel's poll picks them up and shows an unread badge on Sam.
 
-## Running and testing it
+## Walkthrough: submitting
+
+1. `POST /submit` validates the write-up (Zod), appends `submission_finalized`.
+2. `evaluateSubmission` sends rubric + truth + measured facts + submission + query log to the most
+   capable model with a strict output schema; the overall score is computed in code.
+3. `evaluation_returned` is appended; Priya's reaction is generated and posted.
+4. If grading fails, the run stays `submitted`; calling submit again grades the stored write-up.
+
+## Defence in depth
+
+| Risk | Stopped by |
+|---|---|
+| Browser posts its own grade | Event allow-list (`lib/runEvents.ts`) |
+| Someone reads another user's run | Every query filters by the cookie's user id; returns 404 |
+| Illegal step (edit after submitting) | Domain state machine → 409 |
+| Two requests at once | Row lock (`select … for update`); unique index for triggers |
+| A bug edits a published run | Postgres triggers |
+| Truth reaches the browser | `toClientSafe` + type + leak test; `readDataFile` allow-list |
+| An agent gives the answer away | Split knowledge, coded hint levels, prompt rules, leak guard, eval |
+| Grader parses free text wrong | Structured outputs + code-computed score |
+
+## Running it locally
 
 ```bash
 pnpm install
 createdb casebench && createdb casebench_test
 DATABASE_URL=postgres://localhost/casebench pnpm db:migrate
 DATABASE_URL=postgres://localhost/casebench_test pnpm db:migrate
-cp .env.example apps/web/.env.local          # set DATABASE_URL=postgres://localhost/casebench
-pnpm dev                                      # http://localhost:3000
+cp .env.example apps/web/.env.local     # set DATABASE_URL; add ANTHROPIC_API_KEY for real agents
+pnpm dev                                 # http://localhost:3000
 
 TEST_DATABASE_URL=postgres://localhost/casebench_test pnpm test
-```
-
-Try the API by hand (the `-c/-b` flags keep your cookie between calls):
-
-```bash
-curl -c jar -b jar -X POST localhost:3000/api/runs \
-  -H 'content-type: application/json' -d '{"problemSlug":"watch-time-decline"}'
-curl -c jar -b jar localhost:3000/api/runs
+pnpm --filter @casebench/agents eval     # needs ANTHROPIC_API_KEY
+pnpm --filter @casebench/content-tools generate:streamwave   # regenerate the dataset
 ```

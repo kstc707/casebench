@@ -1,7 +1,14 @@
 import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import type { CaseStudyProblem, CodingProblem, Problem } from "@casebench/domain";
+import type {
+  AgentPersona,
+  AgentsConfig,
+  CaseStudyProblem,
+  CodingProblem,
+  Problem,
+  Rubric,
+} from "@casebench/domain";
 
 /**
  * Where content/role-packs lives. CASEBENCH_CONTENT_ROOT wins if set;
@@ -37,52 +44,112 @@ export function toClientSafe(problem: Problem): ClientSafeProblem {
   return problem;
 }
 
+interface ProblemLocation {
+  problem: Problem;
+  /** Folder holding simulation.json / problem.json and its data. */
+  dir: string;
+  /** Company folder (holds personas/). */
+  companyDir: string;
+}
+
 /**
  * Lists every problem across every role/company under content/role-packs.
  * Server-only — the truth model lives in memory here but callers MUST use
  * toClientSafe() before this data crosses into any API response or page
- * props. (See docs/architecture.md: this should also be covered by an
- * automated test that serializes a listing response and asserts the truth
- * model key is absent, the way it was verified in the earlier prototype.)
+ * props. The truth-model leak test (loadRolePack.test.ts) checks this.
  */
 export async function listAllProblems(): Promise<Problem[]> {
-  const problems: Problem[] = [];
+  return (await locateAllProblems()).map((l) => l.problem);
+}
+
+async function locateAllProblems(): Promise<ProblemLocation[]> {
+  const found: ProblemLocation[] = [];
   const contentRoot = resolveContentRoot();
   const roles = await readdir(contentRoot, { withFileTypes: true });
 
   for (const roleDir of roles.filter((d) => d.isDirectory())) {
     const companiesRoot = path.join(contentRoot, roleDir.name, "companies");
-    const companies = await safeReaddir(companiesRoot);
-
-    for (const companyDir of companies) {
-      await loadCaseStudies(companiesRoot, companyDir, problems);
-      await loadCodingProblems(companiesRoot, companyDir, problems);
+    for (const company of await safeReaddir(companiesRoot)) {
+      const companyDir = path.join(companiesRoot, company);
+      for (const [sub, file] of [["simulations", "simulation.json"], ["problems", "problem.json"]]) {
+        const root = path.join(companyDir, sub);
+        for (const slug of await safeReaddir(root)) {
+          const dir = path.join(root, slug);
+          const problem = await readJsonIfExists<Problem>(path.join(dir, file));
+          if (problem) found.push({ problem, dir, companyDir });
+        }
+      }
     }
   }
-
-  return problems;
+  return found;
 }
 
-async function loadCaseStudies(companiesRoot: string, company: string, out: Problem[]) {
-  const simsRoot = path.join(companiesRoot, company, "simulations");
-  const slugs = await safeReaddir(simsRoot);
-  for (const slug of slugs) {
-    const file = path.join(simsRoot, slug, "simulation.json");
-    const problem = await readJsonIfExists<CaseStudyProblem>(file);
-    if (problem) out.push(problem);
+/**
+ * Everything the server needs to run one problem: the full problem (with
+ * truth model), its coworkers, what they know, the rubric, and the measured
+ * facts. Server-only. Only `personas` (public fields) may go to the browser.
+ */
+export interface ProblemBundle {
+  problem: Problem;
+  personas: AgentPersona[];
+  agents: AgentsConfig;
+  rubric: Rubric | null;
+  analysis: unknown;
+  dir: string;
+}
+
+export async function loadProblemBundle(slug: string): Promise<ProblemBundle | null> {
+  const loc = (await locateAllProblems()).find((l) => l.problem.slug === slug);
+  if (!loc) return null;
+
+  const personaDir = path.join(loc.companyDir, "personas");
+  const personas: AgentPersona[] = [];
+  for (const f of (await safeReaddirFiles(personaDir)).filter((f) => f.endsWith(".json")).sort()) {
+    const p = await readJsonIfExists<AgentPersona>(path.join(personaDir, f));
+    if (p) personas.push(p);
+  }
+
+  return {
+    problem: loc.problem,
+    personas,
+    agents: (await readJsonIfExists<AgentsConfig>(path.join(loc.dir, "agents.json"))) ?? {
+      agents: [],
+      triggers: [],
+      leakGuards: [],
+    },
+    rubric: await readJsonIfExists<Rubric>(path.join(loc.dir, "rubric.json")),
+    analysis: await readJsonIfExists<unknown>(path.join(loc.dir, "analysis.json")),
+    dir: loc.dir,
+  };
+}
+
+/** Public persona fields for the Slack panel. */
+export type PublicPersona = Pick<AgentPersona, "id" | "name" | "title" | "role" | "avatarColor">;
+
+export function toPublicPersona(p: AgentPersona): PublicPersona {
+  return { id: p.id, name: p.name, title: p.title, role: p.role, avatarColor: p.avatarColor };
+}
+
+/**
+ * Reads one of a case study's data files. Only files listed in the problem's
+ * dataFiles are servable — so analysis.json, agents.json, rubric.json, and
+ * any path tricks ("../") can never be requested.
+ */
+export async function readDataFile(bundle: ProblemBundle, fileName: string): Promise<string | null> {
+  if (bundle.problem.type !== "case-study") return null;
+  const allowed = bundle.problem.dataFiles.find((f) => path.basename(f) === fileName);
+  if (!allowed) return null;
+  return readFile(path.join(bundle.dir, allowed), "utf-8");
+}
+
+async function safeReaddirFiles(dir: string): Promise<string[]> {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    return entries.filter((e) => e.isFile()).map((e) => e.name);
+  } catch {
+    return [];
   }
 }
-
-async function loadCodingProblems(companiesRoot: string, company: string, out: Problem[]) {
-  const problemsRoot = path.join(companiesRoot, company, "problems");
-  const slugs = await safeReaddir(problemsRoot);
-  for (const slug of slugs) {
-    const file = path.join(problemsRoot, slug, "problem.json");
-    const problem = await readJsonIfExists<CodingProblem>(file);
-    if (problem) out.push(problem);
-  }
-}
-
 async function safeReaddir(dir: string): Promise<string[]> {
   try {
     const entries = await readdir(dir, { withFileTypes: true });

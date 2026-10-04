@@ -8,3 +8,4 @@ build/
 .next/
 apps/web/next-env.d.ts
 *.tsbuildinfo
+apps/web/public/duckdb/

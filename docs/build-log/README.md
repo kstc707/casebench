@@ -19,3 +19,6 @@ if you want the big picture first.
 |---|---|---|
 | 01 | [Run backbone: Postgres + API routes](01-run-backbone.md) | `claude/backbone-runs-api` |
 | 02 | [StreamWave dataset with a provable hidden truth](02-streamwave-dataset.md) | `claude/backbone-runs-api` |
+| 03 | [Workspace: brief, DuckDB SQL sandbox, write-up](03-workspace-and-sql.md) | `claude/backbone-runs-api` |
+| 04 | [AI coworkers that watch the work](04-ai-coworkers.md) | `claude/backbone-runs-api` |
+| 05 | [Grading against the truth + portfolio page](05-grading-and-portfolio.md) | `claude/backbone-runs-api` |

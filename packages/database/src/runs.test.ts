@@ -2,7 +2,16 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { IllegalTransitionError, type RunEvent } from "@casebench/domain";
-import { appendRunEvent, getRun, insertRun, listRuns, RunNotFoundError } from "./runs";
+import {
+  appendRunEvent,
+  getPublishedRun,
+  getRun,
+  insertRun,
+  isUniqueViolation,
+  listRuns,
+  publishRun,
+  RunNotFoundError,
+} from "./runs";
 
 /**
  * Integration tests against a real, migrated Postgres. Skipped unless
@@ -126,5 +135,53 @@ describe.skipIf(!url)("run repository (Postgres)", () => {
         [run.id]
       )
     ).rejects.toThrow(/published/);
+  });
+});
+
+describe.skipIf(!url)("agents and publishing (Postgres)", () => {
+  let pool: pg.Pool;
+  beforeAll(() => {
+    pool = new pg.Pool({ connectionString: url });
+  });
+  afterAll(async () => {
+    await pool.end();
+  });
+
+  it("lets each proactive trigger post only once per run", async () => {
+    const userId = randomUUID();
+    const run = await insertRun(pool, "p", userId);
+    const msg: RunEvent = { type: "message_received", at, channel: "priya", text: "hi", trigger: "kickoff" };
+    await appendRunEvent(pool, run.id, userId, msg);
+    const err = await appendRunEvent(pool, run.id, userId, msg).catch((e) => e);
+    expect(isUniqueViolation(err)).toBe(true);
+
+    // Replies (trigger: null) are unlimited.
+    const reply: RunEvent = { ...msg, trigger: null };
+    await appendRunEvent(pool, run.id, userId, reply);
+    await appendRunEvent(pool, run.id, userId, reply);
+    expect((await getRun(pool, run.id, userId)).events).toHaveLength(4);
+  });
+
+  it("publishes atomically with a portfolio entry, then serves it publicly", async () => {
+    const userId = randomUUID();
+    const run = await insertRun(pool, "p", userId);
+    for (const e of [
+      { type: "brief_viewed", at },
+      { type: "submission_finalized", at, submission: {} },
+      { type: "evaluation_returned", at, score: 81, feedback: {} },
+    ] as RunEvent[]) {
+      await appendRunEvent(pool, run.id, userId, e);
+    }
+    expect(await getPublishedRun(pool, run.id)).toBeNull(); // not public yet
+
+    await publishRun(pool, run.id, userId, "Found the duplicate-event bug.", 81);
+    const published = await getPublishedRun(pool, run.id);
+    expect(published?.portfolio.score).toBe(81);
+    expect(published?.run.events.at(-1)?.type).toBe("run_published");
+
+    // Publishing twice fails and leaves exactly one portfolio entry.
+    await expect(publishRun(pool, run.id, userId, "again", 90)).rejects.toThrow();
+    const { rows } = await pool.query("select count(*)::int as n from portfolio_entries where run_id = $1", [run.id]);
+    expect(rows[0].n).toBe(1);
   });
 });

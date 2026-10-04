@@ -71,9 +71,30 @@ describe("run state machine", () => {
     expect(() => appendEvent(run, { type: "brief_viewed", at })).toThrow(IllegalTransitionError);
   });
 
+  it("lets chat happen at any stage without changing status", () => {
+    const msg: RunEvent = { type: "message_sent", at, channel: "priya", text: "hi" };
+    const started = appendEvent(createRun("p", "u"), msg);
+    expect(started.status).toBe("started");
+
+    const submitted = walk(createRun("p", "u"), toPublished.slice(0, 2));
+    const reply: RunEvent = { type: "message_received", at, channel: "priya", text: "thanks!", trigger: null };
+    const after = appendEvent(submitted, reply);
+    expect(after.status).toBe("submitted");
+    expect(after.events).toHaveLength(submitted.events.length + 1);
+  });
+
+  it("counts a SQL query as working on the problem", () => {
+    const run = appendEvent(createRun("p", "u"), { type: "query_run", at, sql: "select 1", rowCount: 1, error: null });
+    expect(run.status).toBe("in_progress");
+  });
+
   it("treats published runs as immutable", () => {
     const run = walk(createRun("p", "u"), toPublished);
-    for (const event of [{ type: "brief_viewed", at }, { type: "run_published", at }] as RunEvent[]) {
+    for (const event of [
+      { type: "brief_viewed", at },
+      { type: "run_published", at },
+      { type: "message_sent", at, channel: "priya", text: "one more thing" },
+    ] as RunEvent[]) {
       expect(() => appendEvent(run, event)).toThrow(IllegalTransitionError);
     }
   });

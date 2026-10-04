@@ -15,6 +15,12 @@ const nextConfig = {
   outputFileTracingIncludes: {
     "/**": ["../../content/role-packs/**/*"],
   },
+  // DuckDB-WASM only ever runs in the browser. Keep the server bundle from
+  // pulling in its Node build (which webpack can't analyse statically).
+  webpack: (config, { isServer }) => {
+    if (isServer) config.externals.push("@duckdb/duckdb-wasm");
+    return config;
+  },
 };
 
 module.exports = nextConfig;

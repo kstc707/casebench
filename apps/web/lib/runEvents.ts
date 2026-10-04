@@ -2,14 +2,21 @@ import type { RunEvent } from "@casebench/domain";
 
 /**
  * The only event types a browser may append directly. Everything else is
- * produced server-side by its own route: manager messages by the chat route
- * (so the AI reply is real), submission/evaluation/publish by the submit
- * route (so a client can't post its own score).
+ * produced server-side by its own route: chat messages by the messages route
+ * (so agent replies are real), submission/evaluation by the submit route and
+ * publishing by the publish route (so a client can't post its own score).
  */
-export const CLIENT_EVENT_TYPES = ["brief_viewed", "resource_opened", "submission_drafted"] as const;
+export const CLIENT_EVENT_TYPES = [
+  "brief_viewed",
+  "resource_opened",
+  "query_run",
+  "submission_drafted",
+] as const;
 
 const MAX_DRAFT_BYTES = 50_000;
 const MAX_TITLE_LENGTH = 200;
+const MAX_SQL_LENGTH = 5_000;
+const MAX_ERROR_LENGTH = 500;
 
 /**
  * Validates an untrusted request body and builds the event. The timestamp
@@ -36,6 +43,31 @@ export function parseClientEvent(
         return { ok: false, error: `resourceTitle must be at most ${MAX_TITLE_LENGTH} characters` };
       }
       return { ok: true, event: { type: "resource_opened", at, resourceTitle: b.resourceTitle } };
+
+    case "query_run": {
+      if (typeof b.sql !== "string" || b.sql.trim().length === 0) {
+        return { ok: false, error: "sql must be a non-empty string" };
+      }
+      const rowCount = b.rowCount ?? null;
+      if (rowCount !== null && (!Number.isInteger(rowCount) || (rowCount as number) < 0)) {
+        return { ok: false, error: "rowCount must be a non-negative integer or null" };
+      }
+      const error = b.error ?? null;
+      if (error !== null && typeof error !== "string") {
+        return { ok: false, error: "error must be a string or null" };
+      }
+      return {
+        ok: true,
+        event: {
+          type: "query_run",
+          at,
+          // Truncate rather than reject: a huge pasted query is still worth logging.
+          sql: b.sql.slice(0, MAX_SQL_LENGTH),
+          rowCount: rowCount as number | null,
+          error: error === null ? null : error.slice(0, MAX_ERROR_LENGTH),
+        },
+      };
+    }
 
     case "submission_drafted": {
       if (b.draft === undefined) return { ok: false, error: "draft is required" };

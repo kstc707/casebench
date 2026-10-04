@@ -18,8 +18,23 @@ export type RunEvent =
   | { type: "run_started"; at: string; problemSlug: string; userId: string }
   | { type: "brief_viewed"; at: string }
   | { type: "resource_opened"; at: string; resourceTitle: string }
-  | { type: "manager_message_sent"; at: string; message: string }
-  | { type: "manager_message_received"; at: string; message: string; hintLevel: number }
+  /** A SQL query the user ran in the sandbox — this is how agents "watch" the work. */
+  | { type: "query_run"; at: string; sql: string; rowCount: number | null; error: string | null }
+  /** The user posted in a Slack channel (channel = the agent persona's id). */
+  | { type: "message_sent"; at: string; channel: string; text: string }
+  /**
+   * An agent posted in a channel. `trigger` is the id of the proactive trigger
+   * that caused it, or null when it's a reply to the user. `blocked` is true
+   * when the leak guard replaced the model's original reply.
+   */
+  | {
+      type: "message_received";
+      at: string;
+      channel: string;
+      text: string;
+      trigger: string | null;
+      blocked?: boolean;
+    }
   | { type: "submission_drafted"; at: string; draft: unknown }
   | { type: "submission_finalized"; at: string; submission: unknown }
   | { type: "evaluation_returned"; at: string; score: number; feedback: unknown }
@@ -49,14 +64,23 @@ const ALLOWED_TRANSITIONS: Record<RunStatus, RunStatus[]> = {
   published: [], // terminal — no further transitions
 };
 
-export function statusForEvent(event: RunEvent): RunStatus | null {
+/**
+ * What an event does to the run's status: move it to a status, or "keep" it.
+ * Chat messages are "keep" events: conversation can happen at any point
+ * (before starting, after submitting, while waiting for a grade) without
+ * changing where the run is — except after publishing, when nothing can be
+ * appended at all.
+ */
+export function statusForEvent(event: RunEvent): RunStatus | "keep" | null {
   switch (event.type) {
     case "run_started":
       return "started";
+    case "message_sent":
+    case "message_received":
+      return "keep";
     case "brief_viewed":
     case "resource_opened":
-    case "manager_message_sent":
-    case "manager_message_received":
+    case "query_run":
     case "submission_drafted":
       return "in_progress";
     case "submission_finalized":
@@ -83,20 +107,23 @@ export class IllegalTransitionError extends Error {
  * can reason about it without side effects.
  */
 export function appendEvent(run: Run, event: RunEvent): Run {
-  const nextStatus = statusForEvent(event);
-  if (nextStatus === null) {
+  const effect = statusForEvent(event);
+  if (effect === null) {
     throw new Error(`Unknown event type: ${(event as { type: string }).type}`);
   }
+  if (run.status === "published") {
+    throw new IllegalTransitionError(run.status, effect === "keep" ? run.status : effect);
+  }
+  if (effect === "keep") {
+    return { ...run, events: [...run.events, event] };
+  }
+  const nextStatus = effect;
 
   const allowed = ALLOWED_TRANSITIONS[run.status];
   // Same-status events are only legal where ALLOWED_TRANSITIONS says so
   // (in_progress -> in_progress). Without this, e.g. a second run_started
   // or a duplicate submission_finalized would slip through.
   if (!allowed.includes(nextStatus)) {
-    throw new IllegalTransitionError(run.status, nextStatus);
-  }
-
-  if (run.status === "published") {
     throw new IllegalTransitionError(run.status, nextStatus);
   }
 
