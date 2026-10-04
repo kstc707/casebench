@@ -40,7 +40,7 @@
     }
   ],
   "triggers": [
-    { "id": "kickoff", "personaId": "priya", "when": { "type": "run_started" }, "text": "Hey, welcome aboard 👋 First real one for you: leadership is spooked by the watch-time drop. The brief is on the left. Dig in and tell me what's actually going on — I need something I can say on Thursday. Ping me anytime." },
+    { "id": "kickoff", "personaId": "priya", "when": { "type": "run_started" }, "text": "Hey, welcome aboard 👋 First real one for you: leadership is spooked by the watch-time drop. The brief is pinned in #watch-time-drop. Dig in and tell me what's actually going on — I need something I can say on Thursday. Ping me anytime." },
     { "id": "sam-hello", "personaId": "sam", "when": { "type": "query_matches", "pattern": "\\bsessions\\b", "atLeast": 1 }, "text": "hey! priya said you're digging into the watch-time thing. i own the events pipeline behind the sessions table — shout if anything looks off" },
     { "id": "sam-app-versions", "personaId": "sam", "when": { "type": "query_matches", "pattern": "app_version", "atLeast": 1 }, "prompt": "They've started looking at the app_version column. Casually offer that you know the mobile release history if they want to ask. Do not mention any bug, duplicates, or re-sends.", "text": "oh nice, you found app_version. i know the mobile release history pretty well if that's useful" },
     { "id": "priya-checkin", "personaId": "priya", "when": { "type": "query_count", "atLeast": 6 }, "notBeforeMinutes": 8, "prompt": "Check in on how it's going. Mention naturally what they've been looking at (from the activity log) and ask what they're seeing so far. Don't suggest what to look at next.", "text": "How's it going? Anything jumping out yet?" },

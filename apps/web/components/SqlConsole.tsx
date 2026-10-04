@@ -21,18 +21,15 @@ export function SqlConsole({
   runId,
   problemSlug,
   dataFiles,
-  onTables,
   onQueryLogged,
-  insertSql,
 }: {
   runId: string;
   problemSlug: string;
   dataFiles: string[];
-  onTables: (t: TableInfo[]) => void;
   onQueryLogged: () => void;
-  insertSql: { sql: string; n: number } | null;
 }) {
   const [sql, setSql] = useState(STARTER_SQL);
+  const [tables, setTables] = useState<TableInfo[]>([]);
   const [loading, setLoading] = useState<string | null>("Loading the data engine…");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<QueryResult | null>(null);
@@ -41,16 +38,12 @@ export function SqlConsole({
   useEffect(() => {
     loadTables(problemSlug, dataFiles)
       .then((t) => {
-        onTables(t);
+        setTables(t);
         setLoading(null);
       })
       .catch((e: Error) => setLoading(`Couldn't load the data: ${e.message}`));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problemSlug]);
-
-  useEffect(() => {
-    if (insertSql) setSql(insertSql.sql);
-  }, [insertSql]);
 
   async function run() {
     if (running || loading) return;
@@ -72,7 +65,31 @@ export function SqlConsole({
   }
 
   return (
-    <>
+    <div className="sql-layout">
+      <aside className="schema" aria-label="Tables">
+        <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", margin: "2px 4px 8px" }}>
+          Tables
+        </div>
+        {tables.length === 0 && <p className="muted">Loading…</p>}
+        {tables.map((t) => (
+          <details key={t.name}>
+            <summary>
+              <span className="mono">{t.name}</span> <span className="muted">{t.rows.toLocaleString()}</span>
+            </summary>
+            {t.columns.map((c) => (
+              <div key={c.name} className="col mono">
+                {c.name} <span className="muted">{c.type.toLowerCase()}</span>
+              </div>
+            ))}
+            <div className="col" style={{ margin: "4px 0 8px" }}>
+              <a href="#" onClick={(e) => { e.preventDefault(); setSql(`SELECT * FROM ${t.name} LIMIT 20;`); }}>Preview</a>
+              {" · "}
+              <a href={`/api/problems/${problemSlug}/data/${t.name}.csv`} download>CSV</a>
+            </div>
+          </details>
+        ))}
+      </aside>
+      <div className="sql-main">
       <div className="sql-editor">
         <textarea
           aria-label="SQL query"
@@ -115,6 +132,7 @@ export function SqlConsole({
           </table>
         )}
       </div>
-    </>
+      </div>
+    </div>
   );
 }

@@ -51,9 +51,10 @@ when no key is set.
 
 | File | What it does |
 |---|---|
-| `Workspace.tsx` | Three panes: brief/tables · SQL/write-up/feedback · Slack. Start screen. |
-| `SqlConsole.tsx` + `duckdb.ts` | DuckDB in a Web Worker; loads CSVs as tables; logs each query |
-| `SlackPanel.tsx` | DMs with each coworker; polls every 4 s; unread badges |
+| `Workspace.tsx` | Slack-like shell: sidebar (channel, DMs, apps), main view, docked chat, toasts, start screen |
+| `useChat.ts` + `ChatView.tsx` | All chat state (polls every 4 s, unread, toasts) and the DM view |
+| `BriefChannel.tsx` | `#watch-time-drop` with the pinned brief and resources |
+| `SqlConsole.tsx` + `duckdb.ts` | SQL workbench: DuckDB in a Web Worker, schema browser; logs each query |
 | `WriteUp.tsx` | The deliverable; autosaves drafts; submits for grading |
 | `Feedback.tsx` | Score, per-criterion reasons, publish button |
 | `api.ts` | Every call the browser makes to the server |

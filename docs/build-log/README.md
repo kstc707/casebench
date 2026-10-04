@@ -23,3 +23,4 @@ if you want the big picture first.
 | 04 | [AI coworkers that watch the work](04-ai-coworkers.md) | `claude/backbone-runs-api` |
 | 05 | [Grading against the truth + portfolio page](05-grading-and-portfolio.md) | `claude/backbone-runs-api` |
 | 06 | [Any AI provider (free tiers) + one-click deploys](06-any-ai-provider.md) | `claude/backbone-runs-api` |
+| 07 | [Slack-first, dark workspace UI](07-slack-first-ui.md) | `claude/backbone-runs-api` |

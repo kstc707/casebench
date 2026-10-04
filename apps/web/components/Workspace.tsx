@@ -1,21 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { getRun, latestRun, logEvent, startRun } from "./api";
-import type { TableInfo } from "./duckdb";
-import { SqlConsole } from "./SqlConsole";
-import { Avatar, SlackPanel } from "./SlackPanel";
-import { WriteUp } from "./WriteUp";
+import { Avatar } from "./Avatar";
+import { BriefChannel } from "./BriefChannel";
+import { ChatView } from "./ChatView";
 import { Feedback } from "./Feedback";
+import { SqlConsole } from "./SqlConsole";
+import { useChat } from "./useChat";
+import { WriteUp } from "./WriteUp";
 import type { ClientSafeCaseStudy, PublicPersona, RunDetail, ScoredEvaluation, Submission } from "./types";
 
-type CenterTab = "sql" | "writeup" | "feedback";
+type App = "sql" | "writeup" | "feedback";
+type View = { kind: "channel" } | { kind: "dm"; id: string } | { kind: "app"; app: App };
+
+const APP_LABELS: Record<App, { icon: string; label: string }> = {
+  sql: { icon: "⌘", label: "SQL workbench" },
+  writeup: { icon: "✎", label: "Write-up" },
+  feedback: { icon: "★", label: "Feedback" },
+};
 
 /**
- * The simulated workday: brief + data on the left, SQL and the write-up in
- * the middle, Slack with AI coworkers on the right. All state lives on the
- * server as the run's event log; this component just renders it.
+ * The simulated workday, Slack-first: a sidebar with the project channel,
+ * DMs with AI coworkers, and work "apps". When an app is open, the current
+ * conversation stays docked on the right so you can keep talking while you
+ * work. All state lives on the server as the run's event log.
  */
 export function Workspace({
   problem,
@@ -29,193 +39,265 @@ export function Workspace({
   const [run, setRun] = useState<RunDetail | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<CenterTab>("sql");
-  const [leftTab, setLeftTab] = useState<"brief" | "data">("brief");
-  const [tables, setTables] = useState<TableInfo[]>([]);
-  const [nudge, setNudge] = useState(0);
-  const [insertSql, setInsertSql] = useState<{ sql: string; n: number } | null>(null);
-  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     latestRun(problem.slug)
-      .then((r) => {
-        setRun(r);
-        if (r?.events.some((e) => e.type === "evaluation_returned")) setTab("feedback");
-      })
+      .then(setRun)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoaded(true));
   }, [problem.slug]);
+
+  async function start() {
+    setError(null);
+    try {
+      setRun(await startRun(problem.slug));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  if (!loaded) return <main className="page muted">Loading…</main>;
+  if (!run || run.status === "published") {
+    return <StartScreen problem={problem} personas={personas} run={run} onStart={start} error={error} />;
+  }
+  return (
+    <Workday
+      key={run.id}
+      run={run}
+      problem={problem}
+      personas={personas}
+      labels={labels}
+      onRefresh={async () => setRun(await getRun(run.id))}
+    />
+  );
+}
+
+function Workday({
+  run,
+  problem,
+  personas,
+  labels,
+  onRefresh,
+}: {
+  run: RunDetail;
+  problem: ClientSafeCaseStudy;
+  personas: PublicPersona[];
+  labels: Record<string, string>;
+  onRefresh: () => Promise<void>;
+}) {
+  const manager = personas.find((p) => p.role === "manager") ?? personas[0];
+  const evaluation = (run.events.find((e) => e.type === "evaluation_returned") as { feedback: ScoredEvaluation } | undefined)?.feedback;
+  const finalized = run.events.find((e) => e.type === "submission_finalized") as { submission: Submission } | undefined;
+  const lastDraft = [...run.events].reverse().find((e) => e.type === "submission_drafted") as { draft: Submission } | undefined;
+
+  const [view, setView] = useState<View>(evaluation ? { kind: "app", app: "feedback" } : { kind: "dm", id: manager.id });
+  const [dockId, setDockId] = useState(manager.id);
+  const [nudge, setNudge] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const bump = () => setNudge((n) => n + 1);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
 
-  async function start() {
-    setError(null);
-    try {
-      setRun(await startRun(problem.slug));
-      setTab("sql");
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
+  const visible = useMemo(
+    () => (view.kind === "dm" ? [view.id] : view.kind === "app" ? [dockId] : []),
+    [view, dockId]
+  );
+  const chat = useChat(run.id, visible, nudge);
+  const persona = (id: string) => personas.find((p) => p.id === id)!;
+  const openDm = (id: string) => {
+    setView({ kind: "dm", id });
+    setDockId(id);
+  };
 
-  async function refreshRun() {
-    if (run) setRun(await getRun(run.id));
-  }
-
-  if (!loaded) return <main className="page muted">Loading…</main>;
-
-  if (!run || run.status === "published") {
-    return (
-      <main className="page">
-        <Link href="/">← All problems</Link>
-        <h1>{problem.title}</h1>
-        <p>{problem.brief}</p>
-        <div className="card" style={{ display: "grid", gap: 10 }}>
-          <strong>You'll be working with</strong>
-          {personas.map((p) => (
-            <div key={p.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <Avatar persona={p} /> {p.name} <span className="muted">· {p.title}</span>
-            </div>
-          ))}
-          <p className="muted" style={{ margin: 0 }}>
-            They're AI coworkers. They message you on Slack, notice what you're working on, and answer
-            questions — but they won't do the analysis for you.
-          </p>
-        </div>
-        {run?.status === "published" && (
-          <p>
-            Your last attempt is published: <Link href={`/portfolio/${run.id}`}>view it</Link>.
-          </p>
-        )}
-        <button className="primary" onClick={start} style={{ marginTop: 16 }}>
-          {run ? "Start a new attempt" : "Start this problem"}
-        </button>
-        {error && <p className="error">{error}</p>}
-      </main>
-    );
-  }
-
-  const startedAt = Date.parse(run.events[0]?.at ?? new Date().toISOString());
-  const minutes = Math.max(0, Math.floor((now - startedAt) / 60_000));
-  const evaluation = (run.events.find((e) => e.type === "evaluation_returned") as { feedback: ScoredEvaluation } | undefined)?.feedback;
-  const finalized = run.events.find((e) => e.type === "submission_finalized") as { submission: Submission } | undefined;
-  const lastDraft = [...run.events].reverse().find((e) => e.type === "submission_drafted") as { draft: Submission } | undefined;
-  const bump = () => setNudge((n) => n + 1);
+  const minutes = Math.max(0, Math.floor((now - Date.parse(run.events[0]?.at ?? new Date().toISOString())) / 60_000));
+  const apps: App[] = evaluation ? ["sql", "writeup", "feedback"] : ["sql", "writeup"];
+  const isApp = (a: App) => view.kind === "app" && view.app === a;
 
   return (
-    <>
-      <header className="ws-header">
-        <Link href="/">Casebench</Link>
-        <h1>{problem.title}</h1>
-        <span className="pill">{run.status.replace("_", " ")}</span>
-        <span className="muted" style={{ marginLeft: "auto" }}>{minutes} min in</span>
-      </header>
-      <div className="ws-grid">
-        <aside className="ws-col">
-          <div className="tabs">
-            <button className={leftTab === "brief" ? "active" : ""} onClick={() => setLeftTab("brief")}>Brief</button>
-            <button className={leftTab === "data" ? "active" : ""} onClick={() => setLeftTab("data")}>Tables</button>
-          </div>
-          {leftTab === "brief" ? (
-            <div className="section">
-              <h3>The ask</h3>
-              <p>{problem.brief}</p>
-              <h3>Resources</h3>
-              {problem.resources.map((r) => (
-                <details
-                  key={r.title}
-                  className="resource"
-                  onToggle={(e) => {
-                    if ((e.target as HTMLDetailsElement).open) {
-                      void logEvent(run.id, { type: "resource_opened", resourceTitle: r.title });
-                      bump();
-                    }
-                  }}
-                >
-                  <summary>{r.title}</summary>
-                  <pre>{r.content}</pre>
-                </details>
-              ))}
-              <h3>Concepts you'll practice</h3>
-              <ul style={{ paddingLeft: 18 }}>
-                {problem.concepts.map((c) => (
-                  <li key={c.name}><strong>{c.name}</strong> — <span className="muted">{c.blurb}</span></li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <div className="section">
-              {tables.length === 0 && <p className="muted">Tables load with the SQL engine…</p>}
-              {tables.map((t) => (
-                <details key={t.name} className="resource">
-                  <summary>
-                    <strong>{t.name}</strong> <span className="muted">· {t.rows.toLocaleString()} rows</span>
-                  </summary>
-                  <div style={{ padding: "0 10px 10px" }}>
-                    {t.columns.map((c) => (
-                      <div key={c.name} className="mono">{c.name} <span className="muted">{c.type.toLowerCase()}</span></div>
-                    ))}
-                    <button
-                      style={{ marginTop: 8 }}
-                      onClick={() => {
-                        setTab("sql");
-                        setInsertSql({ sql: `SELECT * FROM ${t.name} LIMIT 20;`, n: Date.now() });
-                      }}
-                    >
-                      Preview
-                    </button>{" "}
-                    <a href={`/api/problems/${problem.slug}/data/${t.name}.csv`} download>Download CSV</a>
-                  </div>
-                </details>
-              ))}
-            </div>
-          )}
-        </aside>
+    <div className={`app ${view.kind === "app" ? "with-dock" : ""}`}>
+      <nav className="sidebar" aria-label="Workspace">
+        <div className="ws-name">
+          <strong>StreamWave</strong>
+          <span>Analytics team · {run.status.replace("_", " ")}</span>
+        </div>
+        <div className="nav">
+          <h4>Channels</h4>
+          <button className={`nav-item ${view.kind === "channel" ? "active" : ""}`} onClick={() => setView({ kind: "channel" })}>
+            <span className="icon">#</span> watch-time-drop
+          </button>
+          <h4>Direct messages</h4>
+          {personas.map((p) => {
+            const n = chat.unread(p.id);
+            const active = view.kind === "dm" && view.id === p.id;
+            return (
+              <button key={p.id} className={`nav-item ${active ? "active" : ""} ${n && !active ? "unread" : ""}`} onClick={() => openDm(p.id)}>
+                <Avatar persona={p} small /> {p.name} <span className="presence" title="online" />
+                {n > 0 && !visible.includes(p.id) && <span className="badge">{n}</span>}
+              </button>
+            );
+          })}
+          <h4>Apps</h4>
+          {apps.map((a) => (
+            <button key={a} className={`nav-item ${isApp(a) ? "active" : ""}`} onClick={() => setView({ kind: "app", app: a })}>
+              <span className="icon">{APP_LABELS[a].icon}</span> {APP_LABELS[a].label}
+            </button>
+          ))}
+        </div>
+        <div className="sidebar-foot">
+          <Link href="/">Casebench</Link>
+          <span>{minutes} min in</span>
+        </div>
+      </nav>
 
-        <section className="ws-center">
-          <div className="tabs">
-            <button className={tab === "sql" ? "active" : ""} onClick={() => setTab("sql")}>SQL</button>
-            <button className={tab === "writeup" ? "active" : ""} onClick={() => setTab("writeup")}>Write-up</button>
-            {evaluation && (
-              <button className={tab === "feedback" ? "active" : ""} onClick={() => setTab("feedback")}>Feedback</button>
-            )}
-          </div>
-          {/* The console stays mounted so the loaded tables survive tab switches. */}
-          <div style={{ display: tab === "sql" ? "flex" : "none", flexDirection: "column", flex: 1, minHeight: 0 }}>
-            <SqlConsole
-              runId={run.id}
-              problemSlug={problem.slug}
-              dataFiles={problem.dataFiles}
-              onTables={setTables}
-              onQueryLogged={bump}
-              insertSql={insertSql}
+      <main className="main">
+        <header className="main-head">
+          {view.kind === "channel" && <h2># watch-time-drop</h2>}
+          {view.kind === "dm" && (
+            <>
+              <Avatar persona={persona(view.id)} small />
+              <h2>{persona(view.id).name}</h2>
+              <span className="muted">{persona(view.id).title}</span>
+            </>
+          )}
+          {view.kind === "app" && <h2>{APP_LABELS[view.app].label}</h2>}
+        </header>
+        <div className="main-body">
+          {view.kind === "channel" && (
+            <BriefChannel
+              problem={problem}
+              manager={manager}
+              startedAt={run.events[0]?.at ?? new Date().toISOString()}
+              onOpenResource={(title) => {
+                void logEvent(run.id, { type: "resource_opened", resourceTitle: title });
+                bump();
+              }}
             />
+          )}
+          {view.kind === "dm" && (
+            <ChatView
+              persona={persona(view.id)}
+              messages={chat.messages.filter((m) => m.channel === view.id)}
+              waiting={chat.waitingOn === view.id}
+              error={chat.error}
+              onSend={(text) => void chat.send(view.id, text)}
+            />
+          )}
+          {/* The SQL app stays mounted so loaded tables and results survive navigation. */}
+          <div style={{ display: isApp("sql") ? "flex" : "none", flex: 1, minHeight: 0, flexDirection: "column" }}>
+            <SqlConsole runId={run.id} problemSlug={problem.slug} dataFiles={problem.dataFiles} onQueryLogged={bump} />
           </div>
-          {tab === "writeup" && (
+          {isApp("writeup") && (
             <WriteUp
               runId={run.id}
               initial={finalized?.submission ?? lastDraft?.draft ?? null}
               locked={!!finalized}
               onActivity={bump}
               onSubmitted={async () => {
-                await refreshRun();
-                setTab("feedback");
+                await onRefresh();
+                setView({ kind: "app", app: "feedback" });
                 bump();
               }}
             />
           )}
-          {tab === "feedback" && evaluation && (
+          {isApp("feedback") && evaluation && (
             <Feedback runId={run.id} evaluation={evaluation} labels={labels} published={false} />
           )}
-        </section>
+        </div>
+      </main>
 
-        <aside className="ws-col" style={{ borderRight: "none" }}>
-          <SlackPanel runId={run.id} personas={personas} nudge={nudge} />
+      {view.kind === "app" && (
+        <aside className="dock" aria-label="Chat">
+          <header className="main-head" style={{ gap: 6 }}>
+            {personas.map((p) => (
+              <button
+                key={p.id}
+                className={`nav-item ${dockId === p.id ? "active" : ""} ${chat.unread(p.id) && dockId !== p.id ? "unread" : ""}`}
+                style={{ width: "auto" }}
+                onClick={() => setDockId(p.id)}
+              >
+                <Avatar persona={p} small /> {p.name.split(" ")[0]}
+                {chat.unread(p.id) > 0 && dockId !== p.id && <span className="badge">{chat.unread(p.id)}</span>}
+              </button>
+            ))}
+          </header>
+          <ChatView
+            compact
+            persona={persona(dockId)}
+            messages={chat.messages.filter((m) => m.channel === dockId)}
+            waiting={chat.waitingOn === dockId}
+            error={chat.error}
+            onSend={(text) => void chat.send(dockId, text)}
+          />
         </aside>
+      )}
+
+      <div className="toasts" aria-live="polite">
+        {chat.toasts.map((m, i) => {
+          const p = persona(m.channel);
+          return (
+            <button
+              key={`${m.at}-${i}`}
+              className="toast"
+              onClick={() => {
+                chat.dismissToast(i);
+                if (view.kind === "app") setDockId(m.channel);
+                else openDm(m.channel);
+              }}
+            >
+              <Avatar persona={p} small />
+              <span>
+                <strong>{p.name}</strong>
+                <p>{m.text}</p>
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </>
+    </div>
+  );
+}
+
+function StartScreen({
+  problem,
+  personas,
+  run,
+  onStart,
+  error,
+}: {
+  problem: ClientSafeCaseStudy;
+  personas: PublicPersona[];
+  run: RunDetail | null;
+  onStart: () => void;
+  error: string | null;
+}) {
+  return (
+    <main className="page">
+      <Link href="/">← All simulations</Link>
+      <p className="muted" style={{ margin: "24px 0 4px" }}>StreamWave · Analytics team · {problem.estimatedMinutes} min</p>
+      <h1 style={{ margin: 0 }}>{problem.title}</h1>
+      <p style={{ maxWidth: 680 }}>{problem.brief}</p>
+      <div className="card" style={{ display: "grid", gap: 12, maxWidth: 680 }}>
+        <strong>Your team today</strong>
+        {personas.map((p) => (
+          <div key={p.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <Avatar persona={p} /> <span><strong>{p.name}</strong><br /><span className="muted">{p.title}</span></span>
+          </div>
+        ))}
+        <p className="muted" style={{ margin: 0 }}>
+          They're AI coworkers. They'll message you on Slack, notice what you're working on, and answer questions —
+          but they won't do the analysis for you. Each of them knows different things.
+        </p>
+      </div>
+      {run?.status === "published" && (
+        <p>Your last attempt is published: <Link href={`/portfolio/${run.id}`}>view it</Link>.</p>
+      )}
+      <button className="primary" onClick={onStart} style={{ marginTop: 20, padding: "10px 18px" }}>
+        {run ? "Start a new workday" : "Start your workday"}
+      </button>
+      {error && <p className="error">{error}</p>}
+    </main>
   );
 }
