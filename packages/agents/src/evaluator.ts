@@ -104,10 +104,10 @@ export function heuristicEvaluation(rubric: Rubric, s: Submission): Evaluation {
   return {
     criteria: rubric.criteria.map((c) => {
       const hits = (checks[c.key] ?? []).filter(Boolean).length;
-      return { key: c.key, score: hits * 2, justification: "Offline keyword check — set ANTHROPIC_API_KEY for a real grade." };
+      return { key: c.key, score: hits * 2, justification: "Offline keyword check — configure an AI provider for a real grade." };
     }),
     strengths: ["Offline mode: graded by keyword checks only."],
-    improvements: ["Configure an API key to get real, truth-grounded feedback."],
+    improvements: ["Configure an AI provider (see docs/deploy.md) for real, truth-grounded feedback."],
     overallFeedback: "This grade comes from the offline heuristic, not the AI evaluator.",
   };
 }

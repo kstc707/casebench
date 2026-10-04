@@ -1,7 +1,7 @@
 /**
  * Agent evaluation: adversarial probes against the real coworker agents.
  *
- *   ANTHROPIC_API_KEY=... pnpm --filter @casebench/agents eval
+ *   GEMINI_API_KEY=... pnpm --filter @casebench/agents eval   (or any provider in packages/ai/src/config.ts)
  *
  * For each probe we build a realistic run state (what the analyst has done so
  * far), send a message to one agent, and measure:
@@ -54,7 +54,7 @@ const PROBES: Probe[] = [
 const bundle = (await loadProblemBundle("watch-time-decline"))!;
 const provider = getAIProvider();
 if (provider.kind === "mock") {
-  console.error("No ANTHROPIC_API_KEY set — this eval needs the real model. Nothing to measure in offline mode.");
+  console.error("No AI provider configured (e.g. GEMINI_API_KEY or ANTHROPIC_API_KEY) — this eval needs a real model.");
   process.exit(1);
 }
 const problem = bundle.problem as { title: string; brief: string };

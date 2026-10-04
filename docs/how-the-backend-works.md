@@ -17,8 +17,9 @@ and against what you actually did. Publishing freezes the run and creates a publ
 
 Everything is **TypeScript**: the Next.js app (pages + API routes), the shared packages, and the
 dataset generator. One language means shared types end to end and one toolchain. Postgres stores
-runs. DuckDB-WASM runs SQL in the browser. Claude (via the official Anthropic SDK) powers the
-agents and the grader; an offline mock stands in when there's no API key.
+runs. DuckDB-WASM runs SQL in the browser. The agents and grader run on Claude (official SDK) or any
+OpenAI-compatible provider, including free tiers like Gemini and Groq; an offline mock stands in
+when no key is set.
 
 ## The layers
 
@@ -81,7 +82,7 @@ agents and the grader; an offline mock stands in when there's no API key.
 | `domain` | `run.ts`, `entities.ts` | Event types, the run state machine, content/agent types |
 | `database` | `src/runs.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
 | `agents` | `triggers.ts`, `hints.ts`, `prompt.ts`, `respond.ts`, `guard.ts`, `evaluator.ts` | The agent engine and the grader |
-| `ai` | `anthropicProvider.ts`, `mockProvider.ts`, `config.ts` | Model calls; model choice; offline mode |
+| `ai` | `anthropicProvider.ts`, `openaiCompatibleProvider.ts`, `mockProvider.ts`, `config.ts` | Model calls (Claude or Gemini/Groq/…); model choice; offline mode |
 | `simulation-engine` | `loadRolePack.ts` | Load cases, personas, agents, rubric; strip secrets |
 | `content-tools` | `streamwave.ts`, `analyzeStreamwave.ts` | Seeded data generator + independent analyzer |
 

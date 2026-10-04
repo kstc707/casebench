@@ -24,7 +24,7 @@ export interface StructuredRequest<T> extends Omit<CompletionRequest, "mock"> {
 }
 
 export interface AIProvider {
-  readonly kind: "anthropic" | "mock";
+  readonly kind: "anthropic" | "openai-compatible" | "mock";
   complete(req: CompletionRequest): Promise<string>;
   completeStructured<T>(req: StructuredRequest<T>): Promise<T>;
 }

@@ -22,8 +22,8 @@ terms on first use, prefer plain language, and point to exact files.
 - Agent logic stays pure and tested in `packages/agents`; `apps/web/lib/agents.ts` only wires it to
   the database and the model. Agent behaviour (knowledge, triggers, guards) is content in
   `agents.json`, not code.
-- Model calls go through `packages/ai` (official Anthropic SDK). Everything must keep working in
-  offline mode (no API key).
+- Model calls go through `packages/ai` (Anthropic SDK or the OpenAI-compatible adapter). Everything
+  must keep working in offline mode (no API key).
 - Database changes are new numbered files in `packages/database/migrations/` — never edit an
   applied migration.
 - The case-study truth model must never reach the client; keep the leak test passing.

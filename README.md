@@ -28,7 +28,7 @@ Publish it, and you get a shareable portfolio page.
 - **[How it works](docs/how-the-backend-works.md)** — layers, which file is which, request walkthroughs
 - **[Build log](docs/build-log/README.md)** — every step: what, why, problems hit, how verified, interview notes
 - **[Market research](docs/market-research.md)** — who else does this, and an honest assessment
-- **[Deploy](docs/deploy.md)** — Vercel + Neon + Anthropic in ~20 minutes
+- **[Deploy](docs/deploy.md)** — Vercel + Neon + a free AI key, all from the browser
 
 ## Running it
 
@@ -38,16 +38,17 @@ Needs Node 20+, pnpm, Postgres.
 pnpm install
 createdb casebench
 DATABASE_URL=postgres://localhost/casebench pnpm db:migrate
-cp .env.example apps/web/.env.local   # set DATABASE_URL; add ANTHROPIC_API_KEY for real AI
+cp .env.example apps/web/.env.local   # set DATABASE_URL; add an AI key (e.g. free GEMINI_API_KEY)
 pnpm dev                               # http://localhost:3000
 ```
 
-Without `ANTHROPIC_API_KEY` everything still runs in **offline mode**: coworkers send their scripted
+AI works with Claude or free providers (Gemini, Groq, OpenRouter, local Ollama). See
+[`docs/deploy.md`](docs/deploy.md). Without any key everything still runs in **offline mode**: coworkers send their scripted
 messages and a canned reply, and grading uses a clearly-labelled keyword heuristic.
 
 **Tests:** `TEST_DATABASE_URL=postgres://localhost/casebench_test pnpm test` (create and migrate
 that database first; without it the Postgres tests are skipped). **Agent eval:**
-`pnpm --filter @casebench/agents eval` (needs a key).
+`pnpm --filter @casebench/agents eval` (needs an AI key).
 
 ## Repo layout
 
@@ -57,7 +58,7 @@ packages/
   domain/                 run state machine + shared types
   database/               Postgres migrations, migration runner, run repository
   agents/                 agent engine: triggers, hints, prompts, leak guard, grader (+ eval script)
-  ai/                     Claude via the Anthropic SDK, offline mock, model config
+  ai/                     Claude (Anthropic SDK), OpenAI-compatible adapter (Gemini, Groq, …), offline mock
   simulation-engine/      loads content, strips secrets before anything reaches the browser
   content-tools/          seeded dataset generator + independent analyzer
 content/role-packs/       cases as data: personas, briefs, CSVs, agent configs, rubrics

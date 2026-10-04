@@ -1,58 +1,90 @@
 # Deploying Casebench
 
-Target setup: **Vercel** (the Next.js app) + **Neon** (Postgres) + an **Anthropic API key**.
-All three have free tiers or pay-as-you-go pricing. About 20 minutes.
+You need three free accounts: **GitHub** (you have it), **Vercel** (hosting) and **Neon**
+(database), plus **one AI key**. Everything is done in a web browser. You don't need to install
+anything on your computer. Expect 30–45 minutes the first time.
 
-## 1. Database (Neon)
+## Step 0 — Pick an AI provider (the "brain" for the agents)
 
-1. Create a project at neon.tech. Copy the **pooled** connection string
-   (`postgres://…-pooler…/neondb?sslmode=require`).
-2. From your machine, apply the migrations once:
-   ```bash
-   DATABASE_URL='postgres://…' pnpm db:migrate
-   ```
-   Run this again whenever a new file appears in `packages/database/migrations/`.
+A Claude Pro/Max subscription does **not** include API access; the API is billed separately.
+Casebench works with several providers, so pick one:
 
-## 2. API key (Anthropic)
+| Option | Cost | Quality for this app | Notes |
+|---|---|---|---|
+| **Google Gemini** (`GEMINI_API_KEY`) | **Free tier** (Flash models, generous daily limits) | Good | **Recommended to start.** Key from Google AI Studio, no card. Free-tier prompts may be used by Google to improve products, so don't put private data in. |
+| **Groq** (`GROQ_API_KEY`) | Free tier | OK (open models) | Very fast; tight tokens-per-minute limit, so busy runs may throttle. |
+| **OpenRouter** (`OPENROUTER_API_KEY`) | Free `:free` models, ~50 requests/day | OK | Low daily cap; fine for demos. |
+| **Claude** (`ANTHROPIC_API_KEY`) | Pay-as-you-go, prepaid credits (about $5 minimum) | Best | ~$0.20–0.30 per full attempt (small model chats, top model grades). $5 ≈ 20 attempts. |
+| **Ollama** | Free | Depends on your PC | Runs on your own computer, so it can't serve a deployed site. Good for offline development. |
+| *(none)* | Free | Offline mode | Scripted messages + keyword grading. The app still works. |
 
-Create a key in the Claude Console. Set a monthly spend limit. Rough cost per attempt: agent
-replies use a small model (cents per run); grading uses the most capable model once per
-submission.
+The app auto-detects whichever key you set. Switching provider later is a single environment
+variable change.
 
-## 3. App (Vercel)
+## Step 1 — Database (Neon)
 
-1. Import the GitHub repo in Vercel.
-2. **Root Directory:** `apps/web`. Framework: Next.js (auto-detected). Vercel installs the pnpm
-   workspace from the repo root automatically.
-3. Environment variables:
+1. Sign up at **neon.tech** with GitHub. Create a project (any name, nearest region).
+2. On the dashboard, click **Connect** and copy the connection string with **"Pooled connection"**
+   turned on. It looks like `postgresql://…-pooler.…neon.tech/neondb?sslmode=require`.
+
+You don't need to create tables. The app does it automatically on every deploy (Step 3).
+
+## Step 2 — AI key (Gemini example)
+
+1. Go to **aistudio.google.com**, sign in, and click **Get API key → Create API key**.
+2. Copy it.
+
+## Step 3 — Hosting (Vercel)
+
+1. Sign up at **vercel.com** with GitHub. Click **Add New → Project** and import `casebench`.
+   (If it isn't listed, click "Adjust GitHub App Permissions" and allow the repo.)
+2. **Root Directory:** click *Edit* and choose `apps/web`. Leave everything else at its default.
+3. **Environment Variables:** add
 
    | Name | Value |
    |---|---|
    | `DATABASE_URL` | the Neon pooled connection string |
-   | `ANTHROPIC_API_KEY` | your key |
-   | `CASEBENCH_AGENT_MODEL` | optional — defaults to `claude-haiku-4-5` |
-   | `CASEBENCH_EVALUATOR_MODEL` | optional — defaults to `claude-opus-5-5` |
+   | `GEMINI_API_KEY` | your Gemini key (or one of the other provider keys) |
 
-4. Deploy. Open `/problems/watch-time-decline`, start, and check Priya's kickoff arrives.
+4. Click **Deploy**. The build runs `vercel-build`, which **creates or updates the database tables
+   first** and then builds the app. About 2–3 minutes.
+5. Open the URL Vercel gives you and go to `/problems/watch-time-decline`.
 
-## 4. Smoke test after every deploy
+Every `git push` to `main` redeploys automatically. Pull requests get their own preview URL.
 
-- Start a run → kickoff message appears.
-- Run a query on `sessions` → Sam messages within a few seconds.
-- DM Priya → a real (non-"offline mode") reply.
-- Submit a short write-up → Feedback shows "AI" grading (no "Offline grader" pill).
-- Publish → the portfolio link opens in a private window.
+## Step 4 — Smoke test (do this after every deploy)
 
-## Before sharing publicly
+- Start a run → Priya's welcome message appears.
+- Run a query on `sessions` → Sam messages you within a few seconds.
+- DM Priya → you get a real reply (without "offline mode" in it).
+- Submit a short write-up → Feedback has **no** "Offline grader" label.
+- Publish → the portfolio link opens in a private/incognito window.
 
-- **Rate limiting.** Anyone can start runs and trigger AI calls. Add per-user/IP limits on
-  `/api/runs`, `/messages` and `/submit` (e.g. Upstash Ratelimit) before posting the link widely.
-- **Spend limit** on the API key (above).
-- Run the agent eval with the production model and commit `docs/evals/agents-latest.md`.
+## Troubleshooting
 
-## Notes
+| Symptom | Likely cause |
+|---|---|
+| Build fails with `DATABASE_URL is not set` | Env var missing or misspelled in Vercel → add it and redeploy |
+| Replies say "offline mode" | No AI key detected → check the variable name, then redeploy (env changes need a redeploy) |
+| `429` / rate-limit errors in Vercel logs | Free-tier limit hit → wait, or switch provider |
+| SQL console stuck on "Loading the data engine…" | The browser can't reach `cdn.jsdelivr.net` (some school/office networks). See "Self-hosting DuckDB" below. |
+| Grading times out | Hobby functions are capped at 300 s. Use a faster evaluator model (`CASEBENCH_EVALUATOR_MODEL`). |
 
-- The SQL engine (DuckDB-WASM, ~36 MB) loads from the jsDelivr CDN in users' browsers. To serve
-  it from your own deployment instead, set `NEXT_PUBLIC_DUCKDB_BUNDLE=local` and add
-  `pnpm duckdb:local` before the build command.
-- Grading can take up to a minute; the submit route allows up to 300 s (`maxDuration`).
+## Before sharing the link widely
+
+- **Rate limiting:** anyone with the link can trigger AI calls. Add per-user limits before posting
+  it publicly (on the roadmap). With a free-tier key the worst case is hitting the daily cap; with
+  a paid key, set a spend limit in the provider's console.
+- Run the agent eval and commit `docs/evals/agents-latest.md`:
+  `GEMINI_API_KEY=… pnpm --filter @casebench/agents eval` (this one needs Node on your computer,
+  or ask Claude to run it in a session where the key is available).
+
+## Optional settings
+
+| Variable | Default | What it does |
+|---|---|---|
+| `CASEBENCH_AI_PROVIDER` | auto-detect | `anthropic`, `gemini`, `groq`, `openrouter`, `ollama`, `openai-compatible`, `mock` |
+| `CASEBENCH_AGENT_MODEL` | per provider | Model for the coworkers |
+| `CASEBENCH_EVALUATOR_MODEL` | per provider | Model for grading |
+| `CASEBENCH_LLM_BASE_URL` / `CASEBENCH_LLM_API_KEY` | — | Any other OpenAI-compatible service |
+| `NEXT_PUBLIC_DUCKDB_BUNDLE` | CDN | `local` serves the SQL engine from your own site (also set the build command to `pnpm duckdb:local && pnpm vercel-build`) |
