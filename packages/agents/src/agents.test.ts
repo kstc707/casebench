@@ -204,6 +204,29 @@ describe("evaluation", () => {
     expect(weak.criteria.find((c) => c.key === "communication")?.score).toBe(0);
     expect(heuristicEvaluation(rubric, { a: "x".repeat(150) }).criteria.find((c) => c.key === "communication")?.score).toBe(2);
   });
+
+  it("falls back to the smaller model when the evaluator model is overloaded", async () => {
+    const models: string[] = [];
+    const provider = {
+      kind: "openai-compatible",
+      complete: async () => "",
+      completeStructured: async (req: { model: string; mockValue: unknown }) => {
+        models.push(req.model);
+        if (models.length === 1) throw new Error("LLM API error 503: high demand");
+        return req.mockValue;
+      },
+    } as unknown as MockAIProvider;
+    const result = await evaluateSubmission({
+      provider, rubric, truth: {}, analysis: {}, submission: { executiveSummary: "x", recommendation: "y" }, events: [start],
+    });
+    expect(models).toEqual(["claude-opus-5-5", "claude-haiku-4-5"]);
+    expect(result.gradedBy).toBe("ai");
+
+    const broken = { ...provider, completeStructured: async () => { throw new Error("LLM API error 401: bad key"); } } as unknown as MockAIProvider;
+    await expect(
+      evaluateSubmission({ provider: broken, rubric, truth: {}, analysis: {}, submission: { executiveSummary: "x" }, events: [start] })
+    ).rejects.toThrow(/401/);
+  });
 });
 
 describe("summarizeActivity", () => {

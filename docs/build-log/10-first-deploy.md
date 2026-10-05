@@ -41,6 +41,7 @@ this because they use the offline mock. That's exactly why a live smoke test mat
 | Gemini defaults → `gemini-3.5-flash-lite` (coworkers) and `gemini-3.5-flash` (grading) | `packages/ai/src/config.ts` |
 | If the AI provider errors (retired model, free-tier limit, outage), the coworker posts a visible "couldn't reach the AI service" notice and the error is logged, instead of the request failing with a 500 | `packages/agents/src/respond.ts` (+ test) |
 | **Retry temporary errors:** 429 (rate limit) and 5xx ("high demand") get two retries, after 1 s and then 3 s; errors that waiting won't fix (bad key, retired model) fail at once | `packages/ai/src/openaiCompatibleProvider.ts` (+ test) |
+| **Grading falls back to the smaller model:** if `gemini-3.5-flash` is still overloaded after the retries, grade with `gemini-3.5-flash-lite` instead of failing (it was returning 503 for several minutes straight on the free tier) | `packages/agents/src/evaluator.ts` (+ test) |
 | Deploy guide: free-tier limits per model; troubleshooting rows for retired models and limits | `docs/deploy.md` |
 
 **Second issue, found on the preview deploy of the fix:** the coworkers now answered with real

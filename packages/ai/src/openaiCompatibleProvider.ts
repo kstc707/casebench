@@ -10,6 +10,11 @@ import { AIRefusalError, type AIProvider, type CompletionRequest, type Structure
  *
  * Plain fetch, no vendor SDK: the request is a single JSON POST.
  */
+/** True for rate limits and overloads (429/5xx), which may succeed later or on another model. */
+export function isTransientAIError(err: unknown): boolean {
+  return err instanceof Error && /^LLM API error (429|5\d\d)\b/.test(err.message);
+}
+
 export class OpenAICompatibleProvider implements AIProvider {
   readonly kind = "openai-compatible" as const;
 
