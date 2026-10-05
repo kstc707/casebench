@@ -19,7 +19,7 @@ plan → research online → brief → design → generate data → quality gate
 | 3. Brief | Summarises the real-world pattern: what happened, root causes, how it shows in data, red herrings. **Cites only URLs it actually read**; invented citations are dropped | big model |
 | 4. Design | Writes the whole scenario: fictional company and coworkers, private knowledge, hint levels, triggers, leak guards, hidden answer key, rubric, plus a **data recipe** and **SQL checks** | big model |
 | 5. Data | Code turns the recipe into CSV tables (seeded, repeatable) | no model |
-| 6. Quality gate | Scenario schema validation + the agent's SQL checks run against the generated data in Postgres. Every check must return `ok = true` | no model |
+| 6. Quality gate | Schema validation; no answer-labelling columns; the brief must not trip the scenario's own leak guards; the agent's SQL checks must all return `ok = true` on the data, and **at least 2 must return false on the same recipe generated without the planted effects** (otherwise they prove nothing) | no model |
 | 7. Repair | Any failure goes back to the model as a list of problems; up to 2 repair rounds | big model |
 | 8. Review | Saved as an **unlisted draft by CB**. An admin plays it, reads the sources and checks, and publishes or rejects it | human |
 
@@ -36,6 +36,22 @@ It runs **once a day** (Vercel Cron) and **on demand** from `/admin/agent`, opti
 | **Review queue** before publishing | A human catches weak or wrong problems; the agent never publishes on its own | Auto-publish |
 | One fixed **CB** profile authors everything | Clear provenance: "by CB" means "made by the Casebench agent, checked by a person" | Agent posting as an admin |
 | Big model for brief/design, falls back to the small one if overloaded | Free-tier "Flash" is often busy; a draft from Flash-Lite still has to pass the same quality gate | Failing the run |
+
+## What the first live run taught me
+
+The first real run (Gemini, live web) "passed" but was bad:
+
+1. **Research found nothing relevant.** Hacker News search requires every word by default, so long,
+   specific queries returned nothing; Wikipedia then matched "List of Latin phrases", and the agent carried
+   on anyway. Fixed: short queries, every word optional, a relevance filter on every source, one retry
+   with broader queries, and **no relevant sources → no draft**.
+2. **The checks proved nothing:** "at least one duplicate exists" is true for almost any data, and the
+   recipe even had an `is_duplicate` column that labelled the answer. Fixed with the **counter-check**: run
+   every check again on the same recipe without its planted effects; at least two must flip to false.
+   Answer-labelling column names are rejected.
+3. **The brief hinted at the cause.** Fixed by testing the brief against the scenario's own leak guards.
+
+I rejected that draft, and the gate now catches all three automatically (tests included).
 
 ## Safety
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { htmlToText, isFetchableUrl, research } from "./research";
+import { htmlToText, isFetchableUrl, relevance, research } from "./research";
 
 const long = (s: string) => `${s} `.repeat(80);
 
@@ -12,7 +12,8 @@ function fakeFetch(log: string[]) {
       return json({
         hits: [
           { objectID: "1", title: "Postmortem: duplicate events inflated our metrics", url: "https://blog.example.com/postmortem", points: 300 },
-          { objectID: "2", title: "Ask HN: why did our conversion drop?", story_text: `<p>${long("We changed the checkout flow and conversion fell.")}</p>`, points: 120 },
+          { objectID: "2", title: "Ask HN: why did our metrics drop?", story_text: `<p>${long("Our events were logged twice and conversion fell.")}</p>`, points: 120 },
+          { objectID: "4", title: "Show HN: my sourdough recipe", story_text: `<p>${long("Flour, water, salt.")}</p>`, points: 900 },
           { objectID: "3", title: "Internal link", url: "https://localhost/admin", points: 50 },
         ],
       });
@@ -22,14 +23,15 @@ function fakeFetch(log: string[]) {
         headers: { "content-type": "text/html" },
       });
     }
-    if (url.includes("list=search")) return json({ query: { search: [{ title: "Data quality" }] } });
-    if (url.includes("prop=extracts")) return json({ query: { pages: { "1": { extract: long("Data quality is…") } } } });
+    if (url.includes("list=search")) return json({ query: { search: [{ title: "Data quality" }, { title: "List of Latin phrases" }] } });
+    if (url.includes("prop=extracts") && url.includes("Latin")) return json({ query: { pages: { "1": { extract: long("Carpe diem, et cetera.") } } } });
+    if (url.includes("prop=extracts")) return json({ query: { pages: { "1": { extract: long("Duplicate events distort metrics…") } } } });
     return new Response("not found", { status: 404 });
   }) as unknown as typeof fetch;
 }
 
 describe("research", () => {
-  it("collects readable sources from HN and Wikipedia, and never fetches internal URLs", async () => {
+  it("collects on-topic sources from HN and Wikipedia, skips off-topic ones, and never fetches internal URLs", async () => {
     const log: string[] = [];
     const sources = await research(["duplicate events metrics drop"], { fetch: fakeFetch(log) });
     expect(sources.map((s) => s.via)).toEqual(["hackernews", "hackernews", "wikipedia"]);
@@ -37,6 +39,8 @@ describe("research", () => {
     expect(sources[0].text).not.toContain("evil()");
     expect(sources[1].url).toBe("https://news.ycombinator.com/item?id=2"); // self-post text used directly
     expect(log.some((u) => u.includes("localhost"))).toBe(false);
+    expect(sources.map((s) => s.title).join()).not.toMatch(/sourdough|Latin/); // off-topic pages dropped
+    expect(log[0]).toContain("optionalWords="); // every word optional, so specific queries still find things
   });
 
   it("only fetches public https pages", () => {
@@ -48,5 +52,10 @@ describe("research", () => {
 
   it("turns HTML into text", () => {
     expect(htmlToText("<style>x{}</style><p>Hello &amp; welcome</p><p>Bye</p>")).toBe("Hello & welcome\nBye");
+  });
+
+  it("scores relevance by the query's meaningful words", () => {
+    expect(relevance("duplicate analytics events", "We fixed duplicated events", "our analytics pipeline")).toBe(3);
+    expect(relevance("duplicate analytics events", "List of Latin phrases", "carpe diem")).toBe(0);
   });
 });

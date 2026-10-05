@@ -81,7 +81,8 @@ export async function searchHackerNews(f: Fetch, query: string, limit = 6): Prom
   const q = encodeURIComponent(query);
   const data = await getJson<{ hits: Array<{ title?: string; url?: string; points?: number; story_text?: string; objectID: string }> }>(
     f,
-    `https://hn.algolia.com/api/v1/search?query=${q}&tags=story&hitsPerPage=${limit * 2}`
+    // Every word optional: Algolia otherwise requires all of them, and specific queries find nothing.
+    `https://hn.algolia.com/api/v1/search?query=${q}&optionalWords=${q}&tags=story&hitsPerPage=${limit * 3}`
   );
   return (data?.hits ?? [])
     .filter((h) => h.title)
@@ -125,6 +126,23 @@ async function searchTavily(f: Fetch, query: string, key: string): Promise<Sourc
     .filter((s) => s.text.length > 200);
 }
 
+const STOP = new Set(
+  "the and for with from that this what when why how into after before about over under your our their does did was were are have has not but can its it's case study postmortem post mortem fix fixed".split(" ")
+);
+
+/** Distinct meaningful words of the query that appear in the source: a cheap on-topic test. */
+export function relevance(query: string, title: string, text: string): number {
+  const words = [...new Set(query.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)))];
+  const hay = `${title}\n${text}`.toLowerCase();
+  return words.filter((w) => hay.includes(w.length > 6 ? w.slice(0, w.length - 2) : w)).length;
+}
+
+/** On topic: at least two of the query's words (or the only one, for a one-word query). */
+function onTopic(query: string, title: string, text: string): boolean {
+  const meaningful = query.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)).length;
+  return relevance(query, title, text) >= Math.min(2, Math.max(1, meaningful));
+}
+
 /**
  * Run the queries, de-duplicate, fetch the most promising pages, and keep
  * the ones with enough real text to learn from. Returns at most `max` sources.
@@ -141,15 +159,18 @@ export async function research(queries: string[], opts: { fetch?: Fetch; tavilyK
   };
 
   for (const q of queries) {
-    if (opts.tavilyKey) for (const s of await searchTavily(f, q, opts.tavilyKey)) add(s);
+    if (opts.tavilyKey) for (const s of await searchTavily(f, q, opts.tavilyKey)) if (onTopic(q, s.title, s.text)) add(s);
     for (const hit of await searchHackerNews(f, q, 4)) {
       if (sources.length >= max) break;
       if (seen.has(hit.url)) continue;
       const text = hit.storyText && hit.storyText.length > 300 ? hit.storyText : await fetchPageText(f, hit.url);
-      add({ title: hit.title, url: hit.url, text, via: "hackernews" });
+      if (onTopic(q, hit.title, text)) add({ title: hit.title, url: hit.url, text, via: "hackernews" });
     }
   }
-  // Background from Wikipedia on the first query, if there's room.
-  if (sources.length < max && queries[0]) for (const s of await searchWikipedia(f, queries[0], 1)) add(s);
+  // Background from Wikipedia, if there's room and it's actually on topic.
+  for (const q of queries) {
+    if (sources.length >= max) break;
+    for (const s of await searchWikipedia(f, q, 2)) if (onTopic(q, s.title, s.text)) add(s);
+  }
   return sources;
 }

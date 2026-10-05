@@ -14,7 +14,7 @@ interface Job {
   plan: { role: string; theme: string; queries: string[] } | null;
   brief: { pattern: string; realExamples: Array<{ summary: string; url: string }>; whyItsHard: string } | null;
   sources: Array<{ title: string; url: string }> | null;
-  checks: Array<{ description: string; sql: string; ok: boolean; error?: string }> | null;
+  checks: Array<{ description: string; sql: string; ok: boolean; error?: string; baselineOk?: boolean }> | null;
   log: string[];
   error: string | null;
   createdAt: string;
@@ -164,7 +164,12 @@ export function AgentConsole() {
               <summary>Quality checks ({j.checks.filter((c) => c.ok).length}/{j.checks.length} passed)</summary>
               {j.checks.map((c, i) => (
                 <div key={i} style={{ fontSize: 13, margin: "6px 0" }}>
-                  {c.ok ? "✓" : "✗"} {c.description}
+                  {c.ok ? "✓" : "✗"} {c.description}{" "}
+                  {c.baselineOk !== undefined && (
+                    <span className="muted">
+                      {c.baselineOk ? "(sanity check: also true without the planted cause)" : "(proves the cause: false without it)"}
+                    </span>
+                  )}
                   <pre className="code" style={{ margin: "4px 0", whiteSpace: "pre-wrap" }}>{c.sql}</pre>
                 </div>
               ))}

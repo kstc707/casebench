@@ -28,6 +28,7 @@ function design(overrides: (s: Record<string, any>) => void = () => {}): Design 
   const scenario = starterScenario("ignored", "cybersecurity", "Why are logins failing in one country?") as unknown as Record<string, any>;
   delete scenario.data;
   scenario.problem.truthModel_INTERNAL_DO_NOT_EXPOSE_TO_USER = { rootCause: "credential stuffing from BR since Sep 10" };
+  scenario.agents.leakGuards = [{ personaId: "*", pattern: "credential stuffing", unlessUserSaid: "stuffing", replacement: "What does the data say?" }];
   overrides(scenario);
   return {
     scenario,
@@ -39,8 +40,14 @@ function design(overrides: (s: Record<string, any>) => void = () => {}): Design 
   };
 }
 
+/** Checks "prove" the effect only on data that has it: like a good SQL check would. */
+const discriminating = async (spec: DataSpec, _t: Map<string, any[]>, checks: Check[]): Promise<CheckResult[]> =>
+  checks.map((c) => ({ ...c, ok: spec.tables.some((t) => t.effects.length > 0) }));
+
+const oneSource = async () => [{ title: "Postmortem", url: "https://blog.example.com/a", text: "x".repeat(400), via: "hackernews" as const }];
+
 /** Plays the model: plan, brief, then the designs in order. */
-function fakeProvider(designs: Design[], seen: string[]): AIProvider {
+function fakeProvider(designs: Design[], seen: string[], extra: unknown[] = []): AIProvider {
   const plan = { role: "cybersecurity", theme: "credential stuffing", angle: "failed logins from one region", queries: ["credential stuffing postmortem"] };
   const brief = {
     pattern: "Attackers replay leaked passwords",
@@ -50,7 +57,7 @@ function fakeProvider(designs: Design[], seen: string[]): AIProvider {
     redHerrings: ["a password policy change"],
     whyItsHard: "looks like a bug",
   };
-  const replies: unknown[] = [plan, brief, ...designs];
+  const replies: unknown[] = [plan, ...extra, brief, ...designs];
   return {
     kind: "openai-compatible",
     complete: async () => "",
@@ -66,23 +73,24 @@ describe("author agent pipeline", () => {
     const seen: string[] = [];
     const twoManagers = design((s) => (s.personas[1].role = "manager"));
     const runs: Check[][] = [];
-    const runChecks = async (_spec: DataSpec, tables: Map<string, any[]>, checks: Check[]): Promise<CheckResult[]> => {
+    const runChecks = async (spec: DataSpec, tables: Map<string, any[]>, checks: Check[]): Promise<CheckResult[]> => {
       runs.push(checks);
       expect(tables.get("logins")!.length).toBe(1500);
-      return checks.map((c) => ({ ...c, ok: true }));
+      return discriminating(spec, tables, checks);
     };
     const log: string[] = [];
     const result = await runAuthorAgent({
       provider: fakeProvider([twoManagers, design()], seen),
       slug: "s-test1234",
       runChecks,
-      research: async () => [{ title: "Postmortem", url: "https://blog.example.com/a", text: "x".repeat(400), via: "hackernews" }],
+      research: oneSource,
       log: (l) => log.push(l),
     });
 
     expect(result.repairs).toBe(1);
     expect(seen.at(-1)).toContain("exactly one coworker must be the manager"); // the error went back to the model
-    expect(runs).toHaveLength(1); // checks only run once the schema is valid
+    expect(runs).toHaveLength(2); // only once the schema is valid: on the data, then on the no-effects baseline
+    expect(result.checks.every((c) => c.ok && c.baselineOk === false)).toBe(true);
     expect(result.bundle.problem.slug).toBe("s-test1234");
     expect(result.bundle.rubric.problemSlug).toBe("s-test1234");
     expect(result.bundle.problem.dataFiles).toEqual(["data/logins.csv"]);
@@ -90,6 +98,34 @@ describe("author agent pipeline", () => {
     expect(result.bundle.problem.resources.at(-1)!.title).toBe("Data dictionary");
     expect(result.brief.realExamples.map((e) => e.url)).toEqual(["https://blog.example.com/a"]); // invented citation dropped
     expect(log.join("\n")).toContain("Quality gate passed");
+  });
+
+  it("rejects checks that pass even without the planted effect, and give-away columns", async () => {
+    const seen: string[] = [];
+    const trivial = async (_s: DataSpec, _t: Map<string, any[]>, checks: Check[]) => checks.map((c) => ({ ...c, ok: true }));
+    const giveaway = design();
+    giveaway.dataSpec = structuredClone(dataSpec);
+    giveaway.dataSpec.tables[0].columns.push({ name: "is_fraud", kind: "bool", p: 0.1 });
+    await expect(
+      runAuthorAgent({ provider: fakeProvider([giveaway, design()], seen), slug: "s-x", runChecks: trivial, maxRepairs: 1, research: oneSource })
+    ).rejects.toMatchObject({ details: [expect.stringContaining("prove nothing")] });
+    expect(seen[3]).toContain("labels the answer"); // the give-away column was sent back first
+  });
+
+  it("rejects a brief that gives the answer away", async () => {
+    const seen: string[] = [];
+    const leaky = design((s) => (s.problem.brief = "We think it's credential stuffing. Confirm it."));
+    await runAuthorAgent({ provider: fakeProvider([leaky, design()], seen), slug: "s-x", runChecks: discriminating, research: oneSource });
+    expect(seen.at(-1)).toContain("gives away the answer");
+  });
+
+  it("re-plans the search once, and refuses to write anything without relevant sources", async () => {
+    const searches: string[][] = [];
+    const nothing = async (q: string[]) => (searches.push(q), []);
+    await expect(
+      runAuthorAgent({ provider: fakeProvider([], [], [{ queries: ["broader words"] }]), slug: "s-x", runChecks: discriminating, research: nothing })
+    ).rejects.toThrow(/no relevant real-world sources/);
+    expect(searches).toEqual([["credential stuffing postmortem"], ["broader words"]]);
   });
 
   it("gives up with the reasons when checks keep failing", async () => {
@@ -100,7 +136,7 @@ describe("author agent pipeline", () => {
         slug: "s-x",
         runChecks: failing,
         maxRepairs: 1,
-        research: async () => [{ title: "t", url: "https://blog.example.com/a", text: "x".repeat(400), via: "hackernews" }],
+        research: oneSource,
       })
     ).rejects.toMatchObject({ name: "AuthorAgentError", details: expect.arrayContaining([expect.stringContaining("BR failure rate")]) });
   });
