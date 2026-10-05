@@ -40,7 +40,7 @@ describe("research", () => {
     expect(sources[1].url).toBe("https://news.ycombinator.com/item?id=2"); // self-post text used directly
     expect(log.some((u) => u.includes("localhost"))).toBe(false);
     expect(sources.map((s) => s.title).join()).not.toMatch(/sourdough|Latin/); // off-topic pages dropped
-    expect(log[0]).toContain("optionalWords="); // every word optional, so specific queries still find things
+    expect(log.find((u) => u.includes("algolia"))).toContain("optionalWords="); // every word optional, so specific queries still find things
   });
 
   it("only fetches public https pages", () => {
@@ -63,5 +63,20 @@ describe("research", () => {
     expect(onTopic("pixel firing multiple times", "UFOs invading airspace multiple times a month", "pixel")).toBe(false);
     expect(onTopic("conversion double counting", "Ask HN: which movies did you watch?", "conversion counting double")).toBe(false);
     expect(onTopic("conversion double counting", "We were double counting conversions", "our tracking pixel")).toBe(true);
+  });
+});
+
+describe("postmortems list", () => {
+  it("finds matching incidents and reads the linked write-up", async () => {
+    const { searchPostmortems } = await import("./research");
+    const md = [
+      "# Post-mortems",
+      "[Acme](https://acme.example.com/pm). A config deploy doubled API latency for two hours; the p99 regression came from a cache flag.",
+      "[Other](https://other.example.com/pm). A certificate expired.",
+    ].join("\n");
+    const f = (async (url: string) => new Response(url.includes("githubusercontent") ? md : "", { status: 200 })) as unknown as typeof fetch;
+    const hits = await searchPostmortems(f, "api latency regression deploy");
+    expect(hits.map((h) => h.url)).toEqual(["https://acme.example.com/pm"]);
+    expect(hits[0].summary).toContain("cache flag");
   });
 });

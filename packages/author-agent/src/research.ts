@@ -3,6 +3,8 @@
  *
  * - Hacker News (Algolia search, no key): incident write-ups, postmortems,
  *   "why our metric dropped" stories: real, specific work problems.
+ * - Dan Luu's curated list of public postmortems (one GitHub file, no key):
+ *   hundreds of real incidents, each with a summary and a link to the write-up.
  * - Wikipedia (no key): background on well-known incidents and concepts.
  * - Tavily (optional, free tier with a key): general web search, if
  *   TAVILY_API_KEY is set.
@@ -16,7 +18,7 @@ export interface Source {
   url: string;
   /** Plain text the agent may cite; trimmed. */
   text: string;
-  via: "hackernews" | "wikipedia" | "tavily";
+  via: "hackernews" | "wikipedia" | "tavily" | "postmortems";
 }
 
 type Fetch = typeof fetch;
@@ -115,6 +117,33 @@ export async function searchWikipedia(f: Fetch, query: string, limit = 2): Promi
   return out;
 }
 
+const POSTMORTEMS_URL = "https://raw.githubusercontent.com/danluu/post-mortems/master/README.md";
+
+/** Entries of the postmortems list ("[Company](url). What happened…") that match the query. */
+let postmortemsCache: { f: Fetch; md: string; at: number } | null = null;
+
+export async function searchPostmortems(f: Fetch, query: string, limit = 3): Promise<Array<{ title: string; url: string; summary: string }>> {
+  let md = postmortemsCache && postmortemsCache.f === f && Date.now() - postmortemsCache.at < 3_600_000 ? postmortemsCache.md : "";
+  if (!md) {
+    try {
+      const res = await f(POSTMORTEMS_URL, { headers: UA, signal: AbortSignal.timeout(10_000) });
+      md = res.ok ? await res.text() : "";
+    } catch {
+      return [];
+    }
+    if (md) postmortemsCache = { f, md, at: Date.now() };
+  }
+  const entries: Array<{ title: string; url: string; summary: string; score: number }> = [];
+  for (const line of md.split("\n")) {
+    const m = line.match(/^\s*[*-]?\s*\[([^\]]+)\]\((https?:[^)\s]+)\)[.:]?\s*(.+)$/);
+    if (!m) continue;
+    const summary = m[3].replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").trim();
+    const score = relevance(query, "", summary);
+    if (score >= 1) entries.push({ title: `${m[1]}: ${summary.slice(0, 80)}`, url: m[2], summary, score });
+  }
+  return entries.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
 async function searchTavily(f: Fetch, query: string, key: string): Promise<Source[]> {
   const data = await getJson<{ results?: Array<{ title: string; url: string; content?: string; raw_content?: string }> }>(f, "https://api.tavily.com/search", {
     method: "POST",
@@ -165,6 +194,13 @@ export async function research(queries: string[], opts: { fetch?: Fetch; tavilyK
 
   for (const q of queries) {
     if (opts.tavilyKey) for (const s of await searchTavily(f, q, opts.tavilyKey)) if (onTopic(q, s.title, s.text)) add(s);
+    // Real incident write-ups first: the summary is curated, the linked page has the details.
+    for (const pm of await searchPostmortems(f, q, 2)) {
+      if (sources.length >= max || seen.has(pm.url)) continue;
+      const page = await fetchPageText(f, pm.url);
+      const text = `${pm.summary}\n\n${page}`.slice(0, MAX_TEXT);
+      if (relevance(q, "", text) >= 2) add({ title: pm.title, url: pm.url, text: text.length >= 300 ? text : `${text}\n${" ".repeat(300)}`, via: "postmortems" });
+    }
     for (const hit of await searchHackerNews(f, q, 4)) {
       if (sources.length >= max) break;
       if (seen.has(hit.url)) continue;

@@ -15,7 +15,7 @@ plan → research online → brief → design → generate data → quality gate
 | Step | What happens | Model? |
 |---|---|---|
 | 1. Plan | Picks a concrete problem (your topic, or today's rotating theme) and 1–3 search queries, avoiding simulations that already exist | small model |
-| 2. Research | Searches **Hacker News** (incident write-ups, postmortems) and **Wikipedia**, fetches the best pages, keeps readable text | no model: code |
+| 2. Research | Searches **Dan Luu's curated list of public postmortems** (hundreds of real incidents), **Hacker News** and **Wikipedia**; fetches the best pages; keeps only on-topic, readable text | no model: code |
 | 3. Brief | Summarises the real-world pattern: what happened, root causes, how it shows in data, red herrings. **Cites only URLs it actually read**; invented citations are dropped | big model |
 | 4. Design | Writes the whole scenario: fictional company and coworkers, private knowledge, hint levels, triggers, leak guards, hidden answer key, rubric, plus a **data recipe** and **SQL checks** | big model |
 | 5. Data | Code turns the recipe into CSV tables (seeded, repeatable) | no model |
@@ -64,6 +64,15 @@ nothing) and two more things to fix:
    that jumped in one segment); failures say exactly which checks passed without the cause; one more
    repair round; and the example scenario shows a leak guard (one repair produced malformed guards,
    which also exposed a bug: an empty pattern became a regex that matches everything).
+
+The third live run (topic: "API latency regression after a deploy") showed research was the weak
+link: Hacker News titles rarely match an incident type, so nothing relevant came back twice, and the
+agent correctly refused to write anything. Two fixes:
+
+6. A better corpus for real incidents: **Dan Luu's list of public postmortems** (one GitHub file,
+   each entry a one-line summary plus a link), searched by keyword, with the linked write-up fetched.
+7. The brief accepts sources that show the same **kind** of problem (same mechanism or symptom),
+   not only the exact scenario.
 
 ## Safety
 
