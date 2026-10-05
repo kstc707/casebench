@@ -147,3 +147,8 @@ a.pill { text-decoration: none; color: var(--text); }
 }
 button.link { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; }
 .solver { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+pre.code, .code {
+  background: var(--code-bg); color: var(--code-text);
+  padding: 8px 10px; border-radius: 6px; font-size: 12px; overflow-x: auto;
+}
+details > summary { cursor: pointer; color: var(--muted); }

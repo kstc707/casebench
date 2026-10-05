@@ -1,0 +1,218 @@
+/**
+ * Online research without paid search APIs.
+ *
+ * - Hacker News (Algolia search, no key): incident write-ups, postmortems,
+ *   "why our metric dropped" stories: real, specific work problems.
+ * - Dan Luu's curated list of public postmortems (one GitHub file, no key):
+ *   hundreds of real incidents, each with a summary and a link to the write-up.
+ * - Wikipedia (no key): background on well-known incidents and concepts.
+ * - Tavily (optional, free tier with a key): general web search, if
+ *   TAVILY_API_KEY is set.
+ *
+ * Everything fetched is untrusted text: it only ever goes into a prompt as
+ * quoted source material, never as instructions.
+ */
+
+export interface Source {
+  title: string;
+  url: string;
+  /** Plain text the agent may cite; trimmed. */
+  text: string;
+  via: "hackernews" | "wikipedia" | "tavily" | "postmortems";
+}
+
+type Fetch = typeof fetch;
+const UA = { "User-Agent": "casebench-author-agent/1.0 (+https://casebench.vercel.app)" };
+const MAX_TEXT = 6000;
+
+async function getJson<T>(f: Fetch, url: string, init?: RequestInit): Promise<T | null> {
+  try {
+    const res = await f(url, { ...init, headers: { ...UA, ...(init?.headers ?? {}) }, signal: AbortSignal.timeout(10_000) });
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Only public https pages: no localhost, no bare IPs (keeps the server from being pointed at internal addresses). */
+export function isFetchableUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:") return false;
+    const h = u.hostname;
+    if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal")) return false;
+    if (/^[\d.]+$/.test(h) || h.includes(":")) return false; // IPv4 / IPv6 literal
+    return h.includes(".");
+  } catch {
+    return false;
+  }
+}
+
+/** Crude but dependable HTML → text. */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<(script|style|noscript|svg|nav|footer|header)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>|<\/(p|div|li|h\d|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&#x27;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ ?\n ?/g, "\n")
+    .replace(/\n{2,}/g, "\n\n")
+    .trim();
+}
+
+async function fetchPageText(f: Fetch, url: string): Promise<string> {
+  if (!isFetchableUrl(url)) return "";
+  try {
+    const res = await f(url, { headers: UA, redirect: "follow", signal: AbortSignal.timeout(10_000) });
+    const type = res.headers.get("content-type") ?? "";
+    if (!res.ok || !/text\/html|text\/plain/.test(type)) return "";
+    const body = (await res.text()).slice(0, 1_500_000);
+    return (type.includes("html") ? htmlToText(body) : body).slice(0, MAX_TEXT);
+  } catch {
+    return "";
+  }
+}
+
+export async function searchHackerNews(f: Fetch, query: string, limit = 6): Promise<Array<{ title: string; url: string; points: number; storyText?: string }>> {
+  const q = encodeURIComponent(query);
+  const data = await getJson<{ hits: Array<{ title?: string; url?: string; points?: number; story_text?: string; objectID: string }> }>(
+    f,
+    // Every word optional: Algolia otherwise requires all of them, and specific queries find nothing.
+    `https://hn.algolia.com/api/v1/search?query=${q}&optionalWords=${q}&tags=story&hitsPerPage=${limit * 3}`
+  );
+  return (data?.hits ?? [])
+    // Product launches ("Show HN", "Launch HN") are rarely about real problems; skip them.
+    .filter((h) => h.title && !/^(show|launch) hn\b/i.test(h.title))
+    .map((h) => ({
+      title: h.title!,
+      url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+      points: h.points ?? 0,
+      storyText: h.story_text ? htmlToText(h.story_text) : undefined,
+    }))
+    .sort((a, b) => b.points - a.points)
+    .slice(0, limit);
+}
+
+export async function searchWikipedia(f: Fetch, query: string, limit = 2): Promise<Source[]> {
+  const q = encodeURIComponent(query);
+  const found = await getJson<{ query?: { search?: Array<{ title: string }> } }>(
+    f,
+    `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${q}&srlimit=${limit}&format=json&origin=*`
+  );
+  const out: Source[] = [];
+  for (const { title } of found?.query?.search ?? []) {
+    const t = encodeURIComponent(title);
+    const page = await getJson<{ query?: { pages?: Record<string, { extract?: string }> } }>(
+      f,
+      `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&titles=${t}&format=json&origin=*`
+    );
+    const text = Object.values(page?.query?.pages ?? {})[0]?.extract ?? "";
+    if (text) out.push({ title, url: `https://en.wikipedia.org/wiki/${t}`, text: text.slice(0, MAX_TEXT), via: "wikipedia" });
+  }
+  return out;
+}
+
+const POSTMORTEMS_URL = "https://raw.githubusercontent.com/danluu/post-mortems/master/README.md";
+
+/** Entries of the postmortems list ("[Company](url). What happened…") that match the query. */
+let postmortemsCache: { f: Fetch; md: string; at: number } | null = null;
+
+export async function searchPostmortems(f: Fetch, query: string, limit = 3): Promise<Array<{ title: string; url: string; summary: string }>> {
+  let md = postmortemsCache && postmortemsCache.f === f && Date.now() - postmortemsCache.at < 3_600_000 ? postmortemsCache.md : "";
+  if (!md) {
+    try {
+      const res = await f(POSTMORTEMS_URL, { headers: UA, signal: AbortSignal.timeout(10_000) });
+      md = res.ok ? await res.text() : "";
+    } catch {
+      return [];
+    }
+    if (md) postmortemsCache = { f, md, at: Date.now() };
+  }
+  const entries: Array<{ title: string; url: string; summary: string; score: number }> = [];
+  for (const line of md.split("\n")) {
+    const m = line.match(/^\s*[*-]?\s*\[([^\]]+)\]\((https?:[^)\s]+)\)[.:]?\s*(.+)$/);
+    if (!m) continue;
+    const summary = m[3].replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").trim();
+    const score = relevance(query, "", summary);
+    if (score >= 1) entries.push({ title: `${m[1]}: ${summary.slice(0, 80)}`, url: m[2], summary, score });
+  }
+  return entries.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
+async function searchTavily(f: Fetch, query: string, key: string): Promise<Source[]> {
+  const data = await getJson<{ results?: Array<{ title: string; url: string; content?: string; raw_content?: string }> }>(f, "https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ query, max_results: 5, include_raw_content: true }),
+  });
+  return (data?.results ?? [])
+    .map((r) => ({ title: r.title, url: r.url, text: (r.raw_content || r.content || "").slice(0, MAX_TEXT), via: "tavily" as const }))
+    .filter((s) => s.text.length > 200);
+}
+
+const STOP = new Set(
+  ("the and for with from that this what when why how into after before about over under your our their does did was were are have has not " +
+    "but can its it's case study postmortem post mortem fix fixed multiple times time using used make made new more most many much than then " +
+    "them they there these those just like also only very really still even ever every each other some such into onto upon via data issue issues problem problems").split(" ")
+);
+
+/** Distinct meaningful words of the query that appear in the source: a cheap on-topic test. */
+export function relevance(query: string, title: string, text: string): number {
+  const words = [...new Set(query.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)))];
+  const hay = `${title}\n${text}`.toLowerCase();
+  return words.filter((w) => hay.includes(w.length > 6 ? w.slice(0, w.length - 2) : w)).length;
+}
+
+/**
+ * On topic: the title names at least one of the query's meaningful words, and
+ * the page mentions at least two of them (or the only one, for a one-word query).
+ */
+export function onTopic(query: string, title: string, text: string): boolean {
+  const meaningful = query.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)).length;
+  return relevance(query, title, "") >= 1 && relevance(query, title, text) >= Math.min(2, Math.max(1, meaningful));
+}
+
+/**
+ * Run the queries, de-duplicate, fetch the most promising pages, and keep
+ * the ones with enough real text to learn from. Returns at most `max` sources.
+ */
+export async function research(queries: string[], opts: { fetch?: Fetch; tavilyKey?: string; max?: number } = {}): Promise<Source[]> {
+  const f = opts.fetch ?? fetch;
+  const max = opts.max ?? 5;
+  const sources: Source[] = [];
+  const seen = new Set<string>();
+  const add = (s: Source) => {
+    if (seen.has(s.url) || s.text.length < 300 || sources.length >= max) return;
+    seen.add(s.url);
+    sources.push(s);
+  };
+
+  for (const q of queries) {
+    if (opts.tavilyKey) for (const s of await searchTavily(f, q, opts.tavilyKey)) if (onTopic(q, s.title, s.text)) add(s);
+    // Real incident write-ups first: the summary is curated, the linked page has the details.
+    for (const pm of await searchPostmortems(f, q, 2)) {
+      if (sources.length >= max || seen.has(pm.url)) continue;
+      const page = await fetchPageText(f, pm.url);
+      const text = `${pm.summary}\n\n${page}`.slice(0, MAX_TEXT);
+      if (relevance(q, "", text) >= 2) add({ title: pm.title, url: pm.url, text: text.length >= 300 ? text : `${text}\n${" ".repeat(300)}`, via: "postmortems" });
+    }
+    for (const hit of await searchHackerNews(f, q, 4)) {
+      if (sources.length >= max) break;
+      if (seen.has(hit.url)) continue;
+      const text = hit.storyText && hit.storyText.length > 300 ? hit.storyText : await fetchPageText(f, hit.url);
+      if (onTopic(q, hit.title, text)) add({ title: hit.title, url: hit.url, text, via: "hackernews" });
+    }
+  }
+  // Background from Wikipedia, if there's room and it's actually on topic.
+  for (const q of queries) {
+    if (sources.length >= max) break;
+    for (const s of await searchWikipedia(f, q, 2)) if (onTopic(q, s.title, s.text)) add(s);
+  }
+  return sources;
+}

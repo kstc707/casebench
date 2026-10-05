@@ -84,6 +84,10 @@ Every `git push` to `main` redeploys automatically. Pull requests get their own 
 
 | Variable | Default | What it does |
 |---|---|---|
+| `CASEBENCH_ADMINS` | none | Profile handles (comma-separated) allowed to run and review the author agent at `/admin/agent` |
+| `CRON_SECRET` | none | Enables the daily author-agent run (Vercel Cron sends it); without it the cron route refuses |
+| `TAVILY_API_KEY` | none | Optional: general web search for the author agent (otherwise Hacker News + Wikipedia) |
+| `AUTH_SECRET` | derived from `DATABASE_URL` | Signs profile sessions |
 | `CASEBENCH_AI_PROVIDER` | auto-detect | `anthropic`, `gemini`, `groq`, `openrouter`, `ollama`, `openai-compatible`, `mock` |
 | `CASEBENCH_AGENT_MODEL` | per provider | Model for the coworkers |
 | `CASEBENCH_EVALUATOR_MODEL` | per provider | Model for grading |

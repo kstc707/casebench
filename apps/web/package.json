@@ -13,6 +13,7 @@
   "dependencies": {
     "@casebench/agents": "workspace:^",
     "@casebench/ai": "workspace:*",
+    "@casebench/author-agent": "workspace:*",
     "@casebench/database": "workspace:^",
     "@casebench/domain": "workspace:*",
     "@casebench/simulation-engine": "workspace:*",

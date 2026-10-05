@@ -53,6 +53,8 @@ See **[the vision](docs/vision.md)** for the full product definition and what's 
 | **Portfolio page** | Public record: write-up, grade, every query, the Slack conversation |
 | **Simulation Studio** | Anyone can create a simulation for any field in the app, play it, share it, and see how solvers do |
 | **Community** | Discovery (trending / new / top rated / hardest), likes, ratings (finishers only), comments with "solved it" badges |
+| **Author agent** | An AI that researches real-world incidents online and drafts simulations (fictional company, AI coworkers, planted data, SQL-verified answer key), published as **CB** after review. Runs daily and on demand at `/admin/agent` |
+| **Profiles** | Pick a name (no email): "created by", "solved by N people", and a profile page per person listing what they solved and created |
 | **Complexity score** | Five-dimension difficulty profile from the simulation's structure, recalibrated by real solver results |
 | **"I'm stuck"** | A hint ladder: each press makes a coworker give one stronger hint, and the grader sees how many you used |
 
@@ -188,13 +190,15 @@ when no key is set.
 | `POST /api/runs/:id/submit` | Freeze the write-up, grade it, manager reacts (retry-safe) |
 | `POST /api/runs/:id/publish` | Freeze the run, create the portfolio entry |
 | `GET /api/problems/:slug/data/:file` | Serve a CSV — only files listed in the case's `dataFiles` |
-| `GET /api/simulations/:slug` | Complexity, solver stats, likes/ratings, comments, and what you've done |
-| `POST /api/simulations/:slug/{like,rating,comments}` | Like/unlike; rate 1–5 (finishers only); comment / delete your comment |
+| `GET /api/simulations/:slug` | Complexity, solver stats, creator, recent solvers, likes/ratings, comments, and what you've done |
+| `POST /api/simulations/:slug/{like,rating,comments}` | Like/unlike; rate 1–5 (finishers only); comment / delete your comment. Need a profile (401 otherwise) |
+| `GET/POST/PATCH /api/profile` | Who you are / create a profile from a name (returns the one-time profile key) / rename |
+| `POST /api/profile/signin`, `/signout` | Sign in on another device with @handle + profile key / sign out here |
 | `POST /api/runs/:id/hint` | "I'm stuck": raise that coworker's hint level by one and get one hint |
 | `/api/studio/scenarios/**` + `/studio` pages | Scenario Studio: create/import, edit (validated on save), list in Community, export, delete |
 | `/portfolio/:runId` (page) | Public record of a published run |
 | `lib/agents.ts` | The orchestrator (fire triggers, reply, post-evaluation reaction) |
-| `lib/session.ts` | Anonymous identity cookie |
+| `lib/session.ts` | Who is asking: signed profile session or anonymous guest cookie; create profile, sign in/out, `requireProfile()` |
 | `lib/runEvents.ts` | Validates what a browser may log (allow-list) |
 | `lib/problems.ts` | The only door to content — official files *and* Studio scenarios (slug `s-…`); client-safe views + server-only bundles |
 
@@ -514,7 +518,7 @@ Casebench works with several providers, so pick one:
 
 | Option | Cost | Quality for this app | Notes |
 |---|---|---|---|
-| **Google Gemini** (`GEMINI_API_KEY`) | **Free tier** (Flash models, generous daily limits) | Good | **Recommended to start.** Key from Google AI Studio, no card. Free-tier prompts may be used by Google to improve products, so don't put private data in. |
+| **Google Gemini** (`GEMINI_API_KEY`) | **Free tier**: coworkers use `gemini-3.5-flash-lite` (~500 requests/day), grading uses `gemini-3.5-flash` (~20/day) | Good | **Recommended to start.** Key from Google AI Studio, no card. Free-tier prompts may be used by Google to improve products, so don't put private data in. |
 | **Groq** (`GROQ_API_KEY`) | Free tier | OK (open models) | Very fast; tight tokens-per-minute limit, so busy runs may throttle. |
 | **OpenRouter** (`OPENROUTER_API_KEY`) | Free `:free` models, ~50 requests/day | OK | Low daily cap; fine for demos. |
 | **Claude** (`ANTHROPIC_API_KEY`) | Pay-as-you-go, prepaid credits (about $5 minimum) | Best | ~$0.20–0.30 per full attempt (small model chats, top model grades). $5 ≈ 20 attempts. |
@@ -569,7 +573,8 @@ Every `git push` to `main` redeploys automatically. Pull requests get their own 
 |---|---|
 | Build fails with `DATABASE_URL is not set` | Env var missing or misspelled in Vercel → add it and redeploy |
 | Replies say "offline mode" | No AI key detected → check the variable name, then redeploy (env changes need a redeploy) |
-| `429` / rate-limit errors in Vercel logs | Free-tier limit hit → wait, or switch provider |
+| `429` / rate-limit errors in Vercel logs, or coworkers reply "Couldn't reach the AI service" | Free-tier limit hit → wait, set `CASEBENCH_EVALUATOR_MODEL=gemini-3.5-flash-lite` for more gradings per day, or switch provider |
+| `LLM API error 404 … model … no longer available` | The provider retired a model → set `CASEBENCH_AGENT_MODEL` / `CASEBENCH_EVALUATOR_MODEL` to the model the error suggests, redeploy, and update the defaults in `packages/ai/src/config.ts` |
 | SQL console stuck on "Loading the data engine…" | The browser can't reach `cdn.jsdelivr.net` (some school/office networks). See "Self-hosting DuckDB" below. |
 | Grading times out | Hobby functions are capped at 300 s. Use a faster evaluator model (`CASEBENCH_EVALUATOR_MODEL`). |
 
@@ -586,6 +591,10 @@ Every `git push` to `main` redeploys automatically. Pull requests get their own 
 
 | Variable | Default | What it does |
 |---|---|---|
+| `CASEBENCH_ADMINS` | none | Profile handles (comma-separated) allowed to run and review the author agent at `/admin/agent` |
+| `CRON_SECRET` | none | Enables the daily author-agent run (Vercel Cron sends it); without it the cron route refuses |
+| `TAVILY_API_KEY` | none | Optional: general web search for the author agent (otherwise Hacker News + Wikipedia) |
+| `AUTH_SECRET` | derived from `DATABASE_URL` | Signs profile sessions |
 | `CASEBENCH_AI_PROVIDER` | auto-detect | `anthropic`, `gemini`, `groq`, `openrouter`, `ollama`, `openai-compatible`, `mock` |
 | `CASEBENCH_AGENT_MODEL` | per provider | Model for the coworkers |
 | `CASEBENCH_EVALUATOR_MODEL` | per provider | Model for grading |
@@ -614,7 +623,8 @@ Every `git push` to `main` redeploys automatically. Pull requests get their own 
 ## Next (in priority order)
 
 - [ ] **AI-assisted creation**: "describe the simulation you want" → a validated draft in the Studio (biggest creator-side friction)
-- [ ] Accounts (replace per-browser identity) so creators and solvers keep their history across devices
+- [x] Profiles (name + profile key): who created and solved what, profile pages, history across devices (build log 11)
+- [ ] Real login (Google/GitHub) if the demo turns into a product
 - [ ] 5–10 very different simulations (incident debugging, security investigation, product decision, operations)
 - [ ] New environment types: log viewers, file trees, mock APIs, branching decisions
 
@@ -624,7 +634,7 @@ Every `git push` to `main` redeploys automatically. Pull requests get their own 
 - [ ] Usage analytics view: how real users approach the case (did they dedupe? ask Sam?)
 - [ ] Moderation for Community listings (report / owner approval) and rate limits on scenario creation
 - [ ] Port the coding track (editor + deterministic test runner) from the prototype
-- [ ] Accounts + multi-run portfolios (replace the anonymous cookie)
+- [ ] Multi-run portfolios on profile pages
 - [ ] Server-sent events instead of polling, if concurrency grows
 
 ## Open questions
@@ -1510,6 +1520,402 @@ scenario in `content/`), **Studio saves**, and **imports**.
 
 
 
+<!-- FILE: docs/build-log/09-community-layer.md -->
+
+# 09 — Community layer: complexity, likes, ratings, comments, "I'm stuck"
+
+## Goal
+
+Turn Casebench from "a few analytics cases" into a platform where people create simulations of any
+kind of work and others solve, rate and discuss them. See [`../vision.md`](../vision.md). This step
+adds MVP stages 4 (community feedback) and 5 (complexity), plus the "I'm stuck" hint ladder.
+
+## What we built
+
+| Piece | Files |
+|---|---|
+| **Complexity score v1**: five dimensions + label, blended with solver results | `packages/simulation-engine/src/complexity.ts` (+ tests) |
+| **Likes, ratings, comments; solver stats from runs** | `packages/database/migrations/0004_community.sql`, `src/social.ts` (+ tests) |
+| Community API | `apps/web/app/api/simulations/[slug]/{route,like,rating,comments}` |
+| Meta for many simulations at once (complexity + stats + social) | `apps/web/lib/community.ts` |
+| **Discovery home**: Trending / New / Top rated / Hardest, category filter, search | `apps/web/components/Discover.tsx`, `apps/web/app/page.tsx` |
+| Community panel: complexity breakdown, stats, like, rate, discussion | `apps/web/components/Community.tsx` (start screen + after feedback) |
+| **"I'm stuck"**: one stronger hint per request | `hint_requested` event, `packages/agents/src/hints.ts`, `apps/web/lib/agents.ts` (`requestHint`), `api/runs/[id]/hint` |
+| Creator stats in the Studio (attempts, finished, avg score, likes, rating) | `api/studio/scenarios`, `components/studio/StudioHome.tsx` |
+| Broader categories (cybersecurity, marketing, finance, operations, support) | `packages/domain/src/entities.ts` |
+
+### How the complexity score works
+
+**Structural (from the simulation itself)**, each 0–10 on a square-root scale (early additions count most):
+
+| Dimension | Measured from |
+|---|---|
+| Investigation depth | number and length of resources, rows of data |
+| Ambiguity | private facts the coworkers hold, how many people hold them, number of judged criteria |
+| Technical | 1 if no tools; 4+ if SQL is needed, more with more tables/rows |
+| Deliverable scope | write-up sections, rubric criteria |
+| Time | creator's estimate (180 min = 10) |
+
+Score = 0.3·investigation + 0.3·ambiguity + 0.2·technical + 0.1·scope + 0.1·time.
+Labels: < 3 Beginner, < 5 Intermediate, < 7 Advanced, else Expert.
+
+**Observed (from solvers)**, once ≥ 5 people have finished:
+`observed = 10 × (1 − completion rate × average score)`, weighted up to 60% as completions grow
+(`completions / 50`). Average solve time replaces the creator's estimate when it's plausible (≥ 3 min).
+
+Current values: watch-time case **6.7 Advanced**, UX sign-up case **5.5 Advanced**, blank template **3.1**.
+
+### Ranking
+
+- **Trending** = attempts in the last 7 days × 2 + likes + adjusted rating.
+- **Top rated** uses a Bayesian average (ratings pulled toward 3.5 until there are several), so a
+  single 5★ doesn't top the chart.
+- **Hardest** = complexity score.
+
+## Decisions and why
+
+| Decision | Why | Rejected alternative |
+|---|---|---|
+| Complexity is a **transparent formula** | Creators and solvers can see why it's 6.7; easy to explain and test | A model that "predicts" difficulty with no data to train on |
+| Structural first, then **calibrated by real results** | No data on day one; real outcomes are the truth later | Creator's easy/medium/hard label alone |
+| Stats **computed from runs**, not counters | Can't drift from what happened | Incrementing counters on each event |
+| **Only finishers can rate** | Ratings mean "I did it and it was good/bad" | Anyone can rate |
+| "✓ solved it" badge on comments | Tells readers whose advice comes from experience | Anonymous, equal comments |
+| "I'm stuck" raises the hint level **in code**, one step per press, and is logged | The help ladder is real and visible to the grader; the model can't over-help | Asking the model to "be more helpful" |
+| Offline "I'm stuck" never shows the hint *policy* text | Policies are written for the agent and can contain the answer | Echoing the policy as a canned hint (caught in my own review) |
+| Likes/comments keyed by **slug** | Official and Studio simulations behave identically | Separate systems per source |
+
+## Problems found along the way
+
+1. **Complexity over 10.** The first technical formula could reach 13.1, and the log scale rated a
+   medium case "Expert". Fixed with a square-root scale and capped weights; tests check the range.
+2. **Offline hint leaked the policy.** The offline reply initially echoed the hint description (e.g.
+   "confirm the re-send bug plainly"). Now it uses the persona's neutral offline reply.
+3. **"Average 0 min" from test runs.** Instant test attempts made solver time look real. Times below
+   3 minutes are ignored, and the UI says whether time is "from solvers" or "creator's estimate".
+
+## How it was verified
+
+- 78 unit and integration tests, including:
+  - **Complexity:** range, the real case > template, data > writing, solver blending kicks in at 5 completions.
+  - **Community:** stats from runs, one like per person, finish-before-rating, comment order/badge/ownership.
+  - **Hints:** the "I'm stuck" ladder (per agent, capped).
+- **Browser test, two users:**
+  1. The home page shows complexity badges; Hardest sort and category filter work.
+  2. The start screen shows the complexity breakdown and stats; like works.
+  3. "I'm stuck" gets a reply.
+  4. After submitting, the solver rates 4★ and comments, and the "solved it" badge shows.
+  5. A stranger sees the comment, sees no rating prompt, and gets a 403 rating without finishing.
+- Regression: the workday and Studio browser suites still pass.
+
+## Explain it in an interview
+
+> "I turned the simulator into a two-sided platform: creators publish simulations and solvers rate
+> and discuss them. Difficulty isn't the creator's label. It's a transparent five-dimension score
+> from the simulation's structure that is recalibrated from real outcomes once enough people finish,
+> weighted by completion rate and average score. Stats come straight from the run event log, ratings
+> are limited to people who finished, and the 'I'm stuck' button raises the hint level in code so the
+> grader can see how much help was used."
+
+## Try it yourself
+
+1. In `complexity.ts`, change the weights so ambiguity counts 50%. Which simulation moves most?
+2. Write a SQL query against `run_events` that finds where people press "I'm stuck" most (time since start).
+3. Add a "most discussed" sort to `Discover.tsx`.
+
+
+
+<!-- FILE: docs/build-log/10-first-deploy.md -->
+
+# 10 — First live deploy (Vercel + Neon + Gemini) and what broke
+
+## Goal
+
+Put Casebench on the internet for free and prove the whole loop works live, not just in tests.
+
+## Setup
+
+| Piece | Choice |
+|---|---|
+| Hosting | Vercel (Hobby), project root `apps/web`, public at **casebench.vercel.app** |
+| Database | Neon Postgres (pooled connection); tables created by `vercel-build` running the migrations |
+| AI | Google Gemini free tier via `GEMINI_API_KEY` |
+| Protection | Vercel "Standard Protection": the production domain is public, per-deploy URLs need a Vercel login |
+
+## How it was tested
+
+My cloud session can't reach `vercel.app` directly, so I tested through the Vercel connector:
+
+1. **Read checks:** project settings, env vars present (values never read), build state, runtime logs.
+2. **Page checks:** fetched `/`, a simulation page, and `GET /api/simulations/watch-time-decline`. These
+   showed the complexity badges, stats from Neon and an empty comment list, so the database and the
+   migrations work.
+3. **A real end-to-end run from a temporary Vercel Sandbox** (a short-lived VM that can reach the
+   site): `curl` started a run, sent Priya a DM, pressed "I'm stuck", and read the messages back.
+
+## What broke
+
+**Every AI call failed with a 500.** The runtime log said:
+
+> `LLM API error 404: This model models/gemini-2.5-flash-lite is no longer available to new users.
+> Please update your code to use models/gemini-3.5-flash-lite`
+
+Google retires model versions, and new API keys can't use the old ones. The unit tests couldn't catch
+this because they use the offline mock. That's exactly why a live smoke test matters.
+
+## Fixes
+
+| Fix | File |
+|---|---|
+| Gemini defaults → `gemini-3.5-flash-lite` (coworkers) and `gemini-3.5-flash` (grading) | `packages/ai/src/config.ts` |
+| If the AI provider errors (retired model, free-tier limit, outage), the coworker posts a visible "couldn't reach the AI service" notice and the error is logged, instead of the request failing with a 500 | `packages/agents/src/respond.ts` (+ test) |
+| **Retry temporary errors:** 429 (rate limit) and 5xx ("high demand") get two retries, after 1 s and then 3 s; errors that waiting won't fix (bad key, retired model) fail at once | `packages/ai/src/openaiCompatibleProvider.ts` (+ test) |
+| **Grading falls back to the smaller model:** if `gemini-3.5-flash` is still overloaded after the retries, grade with `gemini-3.5-flash-lite` instead of failing (it was returning 503 for several minutes straight on the free tier) | `packages/agents/src/evaluator.ts` (+ test) |
+| Deploy guide: free-tier limits per model; troubleshooting rows for retired models and limits | `docs/deploy.md` |
+
+**Second issue, found on the preview deploy of the fix:** the coworkers now answered with real
+Gemini replies (Priya, a real "I'm stuck" hint, and Sam's AI-written message), but grading failed once
+with `503: This model is currently experiencing high demand`. The run was safely left "submitted", and
+the UI already offers "press Submit again to retry grading", but free tiers do this often, so the
+adapter now retries briefly before giving up.
+
+**Why not fall back to the offline scripted reply?** That would hide a broken setup behind a reply that
+looks real. A visible notice plus a log line is honest and easy to debug.
+
+**Free-tier limits to know:** about 500 requests/day for Flash-Lite and about 20/day for Flash. Grading
+uses Flash, so that's roughly 20 graded submissions a day. Set
+`CASEBENCH_EVALUATOR_MODEL=gemini-3.5-flash-lite` to trade some grading quality for more volume.
+
+## Explain it in an interview
+
+> "Everything passed in CI, but the first live run failed: Google had retired the model my defaults
+> pointed at. I found it in the production logs within minutes, updated the defaults, and changed the
+> agent layer so a provider failure degrades to a visible notice instead of a 500, because a
+> free-tier limit shouldn't break the product. Lesson: mocks prove your logic, not your integrations;
+> you need a live smoke test after every deploy."
+
+
+
+<!-- FILE: docs/build-log/11-profiles.md -->
+
+# 11 — Profiles: who created it, who solved it, how many
+
+## Goal
+
+Until now every browser was an anonymous id. The app could count attempts, but it couldn't say
+**who** made a simulation, **who** solved it, or show anyone's history, and clearing cookies made you
+a new person. This step adds profiles.
+
+## The decision: a name, not a login
+
+My first plan was "Sign in with GitHub / Google". I changed course after this feedback:
+
+> "It's a demo, don't ask for real Gmail. Just tell them to create a profile with some name."
+
+So a profile is **just a name**:
+
+| Step | What happens |
+|---|---|
+| Pick a name | e.g. "Sai Teja" → you become **@sai-teja** (unique: `sam`, `sam-2`, …) |
+| This browser | stays signed in (a signed cookie, valid for a year) |
+| Profile key | shown **once**, e.g. `k7m2-q9xa-4rtp`; it signs you in on another device; only its hash is stored |
+| Your guest history | comes with you: the profile reuses this browser's guest id, so nothing is lost |
+
+| Option | Why not (for now) |
+|---|---|
+| Google / GitHub login | Real setup (OAuth apps, secrets) and asks testers for real accounts. Overkill for a demo |
+| Email + password | Password storage, resets, email delivery: lots of work, little value at this stage |
+| Name only, no key | Anyone could "be" anyone on a new device |
+
+## When you're asked for a name
+
+Playing stays open. The name is asked for at the moment something gets **recorded under you**:
+starting a simulation, creating one in the Studio, liking, rating, or commenting. The dialog then
+continues what you were doing.
+
+## What's recorded and shown
+
+| Where | What |
+|---|---|
+| Simulation page | "Created by {name}", **"Solved by N people"** (distinct people) with the most recent solvers |
+| Comments | written as your profile; the name links to your profile; "✓ solved it" badge |
+| Cards on the home page | "by {creator's current name}" |
+| **Profile page** `/u/{handle}` | what you've **solved** (date, number of attempts) and **created** |
+| Scores | your best score per simulation is visible **only to you** |
+
+## How it works
+
+| Piece | File |
+|---|---|
+| `users` table (id, handle, display name, key hash); published runs may now change owner only | `packages/database/migrations/0005_accounts.sql` |
+| Create profile, verify key, merge a guest into a profile, solved/created lists, recent solvers | `packages/database/src/accounts.ts` (+ tests) |
+| "Who is asking": signed session cookie or guest cookie; `requireProfile()` (→ 401) | `apps/web/lib/session.ts` |
+| API: `GET/POST/PATCH /api/profile`, `POST /api/profile/signin`, `POST /api/profile/signout` | `apps/web/app/api/profile/**` |
+| The "Pick a name" dialog, header chip, `requireProfile()` on the client | `apps/web/components/Profile.tsx` |
+| Profile page | `apps/web/app/u/[handle]/page.tsx` |
+| "Solved by N people" counts distinct people, not finished attempts | `solvers` in `packages/database/src/social.ts` |
+
+### Key design points
+
+- **One id for everything.** Runs, scenarios, likes, ratings and comments were already keyed by the
+  guest id. A profile **takes over** that id, so there's no data migration at sign-up. Signing in on a
+  second device **merges** that device's guest rows into the profile, in one transaction; if both had
+  liked the same simulation, it stays one like.
+- **Signed session cookie** (`userId.expiry.HMAC`). User ids aren't secret (they appear in API
+  responses), so the cookie must be signed, or anyone could become anyone. The signing key is
+  `AUTH_SECRET`, or derived from `DATABASE_URL` if that isn't set: one less thing to configure.
+- **Profile key** is 12 random characters from an unambiguous alphabet (~60 bits). Because it's
+  random, not user-chosen, a SHA-256 hash is enough (no bcrypt-style stretching needed), compared in
+  constant time.
+- **Published runs stay frozen**, except that the database trigger now allows changing the
+  owner, which is what a merge needs. Any other change is still rejected (tested).
+
+## Bugs found while building it
+
+1. **"Solved by 11 people"** counted finished *attempts*, not people. Added a distinct-people count
+   (`solvers`) and a test that finishing twice is still one solver.
+2. My browser test clicked the header's "Create profile" chip instead of the dialog's button:
+   two buttons with the same label. Scoped the test to the dialog.
+
+## How it was verified
+
+- 86 unit and database tests (profiles, unique handles, key check, guest merge incl. published runs,
+  likes de-duplicated on merge, distinct solvers, published runs still immutable).
+- Browser test with three people:
+  1. A likes a simulation → "Pick a name" → profile created, key shown → the like goes through.
+  2. A starts, submits, rates and comments; the comment links to A's profile; "Solved by" lists A.
+  3. A's profile shows the solve **with** the score; a stranger sees it **without** the score.
+  4. A signs in on a second device: wrong key rejected, right key works, and the start continues.
+  5. C creates a Studio simulation → asked for a name → the editor shows C as author.
+- The earlier workday, community and Studio suites still pass.
+
+## Explain it in an interview
+
+> "Every action was already keyed by one id: an anonymous browser id. To add profiles I made the
+> profile take over that id, so nothing needed migrating, and signing in on another device merges
+> that device's history in one transaction. Since it's a demo, I didn't add OAuth: a profile is a
+> name plus a one-time random key, stored only as a hash. The session cookie is HMAC-signed, because
+> user ids aren't secret. And 'solved by' counts distinct people: my first version counted attempts."
+
+## Try it yourself
+
+1. Add a "Top solvers" page: people ranked by number of simulations solved (one SQL query on `runs`).
+2. Let people regenerate their profile key from their profile page.
+3. Show a solver's best score publicly if they opt in.
+
+
+
+<!-- FILE: docs/build-log/12-author-agent.md -->
+
+# 12 — The author agent: an AI that researches real problems and writes simulations
+
+## Goal
+
+> "Create an agent whose sole purpose is adding problems to the application, which should encapsulate
+> real-world problems. The agent can do online research and use the simulation agent to create a
+> problem, and the author will be CB."
+
+## What it does
+
+```
+plan → research online → brief → design → generate data → quality gate → (repair ≤ 2) → draft by CB → review → publish
+```
+
+| Step | What happens | Model? |
+|---|---|---|
+| 1. Plan | Picks a concrete problem (your topic, or today's rotating theme) and 1–3 search queries, avoiding simulations that already exist | small model |
+| 2. Research | Searches **Hacker News** (incident write-ups, postmortems) and **Wikipedia**, fetches the best pages, keeps readable text | no model: code |
+| 3. Brief | Summarises the real-world pattern: what happened, root causes, how it shows in data, red herrings. **Cites only URLs it actually read**; invented citations are dropped | big model |
+| 4. Design | Writes the whole scenario: fictional company and coworkers, private knowledge, hint levels, triggers, leak guards, hidden answer key, rubric, plus a **data recipe** and **SQL checks** | big model |
+| 5. Data | Code turns the recipe into CSV tables (seeded, repeatable) | no model |
+| 6. Quality gate | Schema validation; no answer-labelling columns; the brief must not trip the scenario's own leak guards; the agent's SQL checks must all return `ok = true` on the data, and **at least 2 must return false on the same recipe generated without the planted effects** (otherwise they prove nothing) | no model |
+| 7. Repair | Any failure goes back to the model as a list of problems; up to 2 repair rounds | big model |
+| 8. Review | Saved as an **unlisted draft by CB**. An admin plays it, reads the sources and checks, and publishes or rejects it | human |
+
+It runs **once a day** (Vercel Cron) and **on demand** from `/admin/agent`, optionally with a topic.
+
+## Decisions and why
+
+| Decision | Why | Rejected alternative |
+|---|---|---|
+| The model writes a **data recipe**, code writes the rows | Rows from a model are inconsistent and can't be trusted to contain the planted cause; a seeded generator is exact and repeatable | Asking the model for CSVs |
+| **SQL checks prove the answer key** | The worst failure is a simulation whose "truth" isn't in the data. Now a draft exists only if the cause is findable | Trusting the model's claims |
+| Research via **Hacker News + Wikipedia** (no key); Tavily optional | Gemini's Google Search grounding isn't available on the free tier | Paid search APIs |
+| **Fictional** companies and people | Real incidents inspire the pattern; naming real companies would be unfair and possibly defamatory | Re-telling the real incident |
+| **Review queue** before publishing | A human catches weak or wrong problems; the agent never publishes on its own | Auto-publish |
+| One fixed **CB** profile authors everything | Clear provenance: "by CB" means "made by the Casebench agent, checked by a person" | Agent posting as an admin |
+| Big model for brief/design, falls back to the small one if overloaded | Free-tier "Flash" is often busy; a draft from Flash-Lite still has to pass the same quality gate | Failing the run |
+
+## What the first live run taught me
+
+The first real run (Gemini, live web) "passed" but was bad:
+
+1. **Research found nothing relevant.** Hacker News search requires every word by default, so long,
+   specific queries returned nothing; Wikipedia then matched "List of Latin phrases", and the agent carried
+   on anyway. Fixed: short queries, every word optional, a relevance filter on every source, one retry
+   with broader queries, and **no relevant sources → no draft**.
+2. **The checks proved nothing:** "at least one duplicate exists" is true for almost any data, and the
+   recipe even had an `is_duplicate` column that labelled the answer. Fixed with the **counter-check**: run
+   every check again on the same recipe without its planted effects; at least two must flip to false.
+   Answer-labelling column names are rejected.
+3. **The brief hinted at the cause.** Fixed by testing the brief against the scenario's own leak guards.
+
+I rejected that draft, and the gate now catches all three automatically (tests included).
+
+## Safety
+
+- **Fetched pages are untrusted.** They're wrapped as quoted `<source>` material, and the prompt says to
+  ignore instructions inside them. Only public `https` URLs are fetched (no localhost, no raw IPs).
+- **Model-written SQL runs in a sandbox:** only a single `SELECT`/`WITH` (no `;`, no DDL/DML, no
+  `pg_*()` functions), an 8-second statement timeout, temporary tables only, and the transaction is
+  **always rolled back**.
+- **Admins only** (`CASEBENCH_ADMINS` = profile handles); the cron needs `CRON_SECRET`.
+- The CB profile can't be signed into (its stored key hash isn't the hash of any key).
+
+## Files
+
+| Piece | File |
+|---|---|
+| Data recipe → tables, seeded RNG, effects, CSV | `packages/author-agent/src/dataSpec.ts` (+ tests) |
+| Online research (HN, Wikipedia, optional Tavily), URL safety, HTML → text | `packages/author-agent/src/research.ts` (+ tests) |
+| Rotating daily themes across 10 roles | `packages/author-agent/src/themes.ts` |
+| The pipeline, prompts, quality gate, repair loop | `packages/author-agent/src/pipeline.ts` (+ tests) |
+| Jobs table, CB profile | `packages/database/migrations/0006_author_agent.sql` |
+| Job tracking, approve/reject, SQL-check sandbox | `packages/database/src/authorJobs.ts` (+ tests) |
+| Background runs, admin check, Postgres column types | `apps/web/lib/authorAgent.ts` |
+| API + daily cron | `apps/web/app/api/author-agent/**`, `apps/web/vercel.json` |
+| Review console | `apps/web/app/admin/agent`, `apps/web/components/AgentConsole.tsx` |
+
+## Setup (once)
+
+| Variable | Value |
+|---|---|
+| `CASEBENCH_ADMINS` | your profile handle, e.g. `sai-teja` (comma-separate several) |
+| `CRON_SECRET` | any long random string (Vercel sends it to the cron route) |
+| `TAVILY_API_KEY` | optional: better general web search (free tier) |
+
+## How it was verified
+
+- Unit tests: the generator is deterministic and plants exactly what the recipe says; recipe mistakes
+  are reported readably; research never fetches internal URLs and ignores scripts; the pipeline
+  catches an invalid design, sends the error back, and the repair passes; failed checks after all
+  repairs give up with reasons; offline mode refuses to run.
+- Database tests: the SQL sandbox runs checks, isolates errors, blocks `drop`, and leaves nothing
+  behind; jobs go running → ready → approved, can't be decided twice, and rejection deletes the draft.
+- Locally: admin-only API, background job with log, cron refuses without the secret.
+- Live: a real run on the Vercel preview with Gemini (see the PR).
+
+## Explain it in an interview
+
+> "I built an agent that writes the product's content. It researches real incidents online, writes a
+> brief citing only pages it actually read, then designs a simulation: a fictional company, AI
+> coworkers with private knowledge, a hidden answer key, and a data recipe. Code, not the model,
+> generates the data. The model also writes SQL checks that prove the answer key is findable in that
+> data; they run in a rolled-back Postgres transaction, and failures go back to the model to repair.
+> Nothing goes live without a human approving it."
+
+
+
 <!-- FILE: docs/build-log/README.md -->
 
 # Build log
@@ -1540,6 +1946,9 @@ if you want the big picture first.
 | 07 | [Slack-first, dark workspace UI](07-slack-first-ui.md) | `claude/backbone-runs-api` |
 | 08 | [Scenario Studio: anyone can create simulations, any role](08-scenario-studio.md) | `claude/backbone-runs-api` |
 | 09 | [Community layer: complexity, likes, ratings, comments, "I'm stuck"](09-community-layer.md) | `claude/community-layer` |
+| 10 | [First live deploy, and the retired-model bug it caught](10-first-deploy.md) | `claude/gemini-3-5-models` |
+| 11 | [Profiles: who created it, who solved it, how many](11-profiles.md) | `claude/accounts` |
+| 12 | [The author agent: researches real problems and writes simulations](12-author-agent.md) | `claude/author-agent` |
 
 
 
@@ -1556,13 +1965,25 @@ CLAUDE.md
 CONTRIBUTING.md
 LICENSE
 README.md
+apps/web/app/admin/agent/page.tsx
+apps/web/app/api/author-agent/cron/route.ts
+apps/web/app/api/author-agent/jobs/[id]/route.ts
+apps/web/app/api/author-agent/route.ts
 apps/web/app/api/problems/[slug]/data/[file]/route.ts
+apps/web/app/api/profile/route.ts
+apps/web/app/api/profile/signin/route.ts
+apps/web/app/api/profile/signout/route.ts
 apps/web/app/api/runs/[id]/events/route.ts
+apps/web/app/api/runs/[id]/hint/route.ts
 apps/web/app/api/runs/[id]/messages/route.ts
 apps/web/app/api/runs/[id]/publish/route.ts
 apps/web/app/api/runs/[id]/route.ts
 apps/web/app/api/runs/[id]/submit/route.ts
 apps/web/app/api/runs/route.ts
+apps/web/app/api/simulations/[slug]/comments/route.ts
+apps/web/app/api/simulations/[slug]/like/route.ts
+apps/web/app/api/simulations/[slug]/rating/route.ts
+apps/web/app/api/simulations/[slug]/route.ts
 apps/web/app/api/studio/scenarios/[id]/export/route.ts
 apps/web/app/api/studio/scenarios/[id]/route.ts
 apps/web/app/api/studio/scenarios/route.ts
@@ -1573,10 +1994,15 @@ apps/web/app/portfolio/[runId]/page.tsx
 apps/web/app/problems/[slug]/page.tsx
 apps/web/app/studio/[id]/page.tsx
 apps/web/app/studio/page.tsx
+apps/web/app/u/[handle]/page.tsx
+apps/web/components/AgentConsole.tsx
 apps/web/components/Avatar.tsx
 apps/web/components/BriefChannel.tsx
 apps/web/components/ChatView.tsx
+apps/web/components/Community.tsx
+apps/web/components/Discover.tsx
 apps/web/components/Feedback.tsx
+apps/web/components/Profile.tsx
 apps/web/components/SqlConsole.tsx
 apps/web/components/Workspace.tsx
 apps/web/components/WriteUp.tsx
@@ -1588,6 +2014,8 @@ apps/web/components/types.ts
 apps/web/components/useChat.ts
 apps/web/lib/agents.ts
 apps/web/lib/api.ts
+apps/web/lib/authorAgent.ts
+apps/web/lib/community.ts
 apps/web/lib/db.ts
 apps/web/lib/problems.ts
 apps/web/lib/runEvents.ts
@@ -1597,6 +2025,7 @@ apps/web/next.config.js
 apps/web/package.json
 apps/web/scripts/copy-duckdb.mjs
 apps/web/tsconfig.json
+apps/web/vercel.json
 content/role-packs/data-analyst/companies/streamwave/personas/priya.json
 content/role-packs/data-analyst/companies/streamwave/personas/sam.json
 content/role-packs/data-analyst/companies/streamwave/simulations/watch-time-decline/agents.json
@@ -1626,12 +2055,17 @@ docs/build-log/05-grading-and-portfolio.md
 docs/build-log/06-any-ai-provider.md
 docs/build-log/07-slack-first-ui.md
 docs/build-log/08-scenario-studio.md
+docs/build-log/09-community-layer.md
+docs/build-log/10-first-deploy.md
+docs/build-log/11-profiles.md
+docs/build-log/12-author-agent.md
 docs/build-log/README.md
 docs/concept-brief.md
 docs/deploy.md
 docs/how-the-backend-works.md
 docs/market-research.md
 docs/roadmap.md
+docs/vision.md
 package.json
 packages/agents/package.json
 packages/agents/scripts/eval-agents.ts
@@ -1654,6 +2088,16 @@ packages/ai/src/openaiCompatibleProvider.ts
 packages/ai/src/provider.ts
 packages/ai/src/providers.test.ts
 packages/ai/tsconfig.json
+packages/author-agent/package.json
+packages/author-agent/src/dataSpec.test.ts
+packages/author-agent/src/dataSpec.ts
+packages/author-agent/src/index.ts
+packages/author-agent/src/pipeline.test.ts
+packages/author-agent/src/pipeline.ts
+packages/author-agent/src/research.test.ts
+packages/author-agent/src/research.ts
+packages/author-agent/src/themes.ts
+packages/author-agent/tsconfig.json
 packages/content-tools/package.json
 packages/content-tools/scripts/generate-streamwave.ts
 packages/content-tools/scripts/import-scenario.ts
@@ -1667,14 +2111,23 @@ packages/database/README.md
 packages/database/migrations/0001_init.sql
 packages/database/migrations/0002_trigger_once.sql
 packages/database/migrations/0003_scenarios.sql
+packages/database/migrations/0004_community.sql
+packages/database/migrations/0005_accounts.sql
+packages/database/migrations/0006_author_agent.sql
 packages/database/package.json
 packages/database/scripts/migrate.mjs
+packages/database/src/accounts.test.ts
+packages/database/src/accounts.ts
+packages/database/src/authorJobs.test.ts
+packages/database/src/authorJobs.ts
 packages/database/src/index.ts
 packages/database/src/pool.ts
 packages/database/src/runs.test.ts
 packages/database/src/runs.ts
 packages/database/src/scenarios.test.ts
 packages/database/src/scenarios.ts
+packages/database/src/social.test.ts
+packages/database/src/social.ts
 packages/database/tsconfig.json
 packages/domain/package.json
 packages/domain/src/entities.ts
@@ -1683,6 +2136,8 @@ packages/domain/src/run.test.ts
 packages/domain/src/run.ts
 packages/domain/tsconfig.json
 packages/simulation-engine/package.json
+packages/simulation-engine/src/complexity.test.ts
+packages/simulation-engine/src/complexity.ts
 packages/simulation-engine/src/index.ts
 packages/simulation-engine/src/loadRolePack.test.ts
 packages/simulation-engine/src/loadRolePack.ts
