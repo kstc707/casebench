@@ -26,23 +26,34 @@ export interface AgentTurnInput {
  */
 export async function generateAgentMessage(input: AgentTurnInput): Promise<{ text: string; blocked: boolean }> {
   const { persona, agent, events, now } = input;
-  const raw = await input.provider.complete({
-    model: agentModel(persona.model),
-    maxTokens: 400,
-    system: buildAgentSystemPrompt(persona, agent, input.problem),
-    user: buildAgentUserPrompt({
-      activity: summarizeActivity(events, now),
-      transcript: transcript(events, persona.id, persona.name),
-      hintLevel: currentHintLevel(agent, events, now),
-      instruction: input.instruction,
-    }),
-    mock: input.mock,
-  });
+  let raw: string;
+  try {
+    raw = await input.provider.complete({
+      model: agentModel(persona.model),
+      maxTokens: 400,
+      system: buildAgentSystemPrompt(persona, agent, input.problem),
+      user: buildAgentUserPrompt({
+        activity: summarizeActivity(events, now),
+        transcript: transcript(events, persona.id, persona.name),
+        hintLevel: currentHintLevel(agent, events, now),
+        instruction: input.instruction,
+      }),
+      mock: input.mock,
+    });
+  } catch (err) {
+    // A provider outage or free-tier limit shouldn't break the chat: the
+    // user's message is already saved, so post a visible notice and log why.
+    console.error(`agent ${persona.id}: AI provider error:`, err);
+    return { text: AI_UNAVAILABLE, blocked: false };
+  }
 
   // "Raised by the user" = anything they wrote in any channel, or queried.
   const userTexts = [...userMessages(events), ...queries(events).map((q) => q.sql)];
   return applyLeakGuards(raw || input.mock, input.guards, persona.id, userTexts);
 }
+
+export const AI_UNAVAILABLE =
+  "(Couldn't reach the AI service just now. It may be busy or over its daily limit. Try again in a minute.)";
 
 export function replyInstruction(userText: string): string {
   return `They just sent you this message: """${userText}""" Reply to it.`;

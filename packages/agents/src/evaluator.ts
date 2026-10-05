@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DEFAULT_DELIVERABLE, type DeliverableSection, type Rubric, type RunEvent, type Submission } from "@casebench/domain";
-import { evaluatorModel, type AIProvider } from "@casebench/ai";
+import { agentModel, evaluatorModel, isTransientAIError, type AIProvider } from "@casebench/ai";
 import { minutesElapsed, queries, userMessages } from "./activity";
 
 export type { Submission };
@@ -138,8 +138,8 @@ export async function evaluateSubmission(args: {
 }): Promise<ScoredEvaluation> {
   const { provider, rubric, submission } = args;
   const mockValue = heuristicEvaluation(rubric, submission);
-  const evaluation = await provider.completeStructured({
-    model: evaluatorModel(),
+  const request = (model: string) => provider.completeStructured({
+    model,
     maxTokens: 16000,
     effort: "high",
     system: buildEvaluatorSystemPrompt(rubric, args.truth, args.analysis),
@@ -155,6 +155,16 @@ export async function evaluateSubmission(args: {
     schema: EvaluationSchema,
     mockValue,
   });
+  let evaluation;
+  try {
+    evaluation = await request(evaluatorModel());
+  } catch (err) {
+    // Free-tier "big" models are often overloaded. A grade from the smaller
+    // model beats making the user wait; anything else is a real error.
+    if (!isTransientAIError(err) || agentModel() === evaluatorModel()) throw err;
+    console.warn(`evaluator: ${evaluatorModel()} unavailable, grading with ${agentModel()}`);
+    evaluation = await request(agentModel());
+  }
   return {
     ...evaluation,
     score: weightedScore(rubric, evaluation),

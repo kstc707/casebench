@@ -4,7 +4,7 @@ import { MockAIProvider } from "@casebench/ai";
 import { dueTriggers } from "./triggers";
 import { currentHintLevel } from "./hints";
 import { applyLeakGuards } from "./guard";
-import { generateAgentMessage, replyInstruction } from "./respond";
+import { AI_UNAVAILABLE, generateAgentMessage, replyInstruction } from "./respond";
 import { evaluateSubmission, heuristicEvaluation, parseSubmission, weightedScore } from "./evaluator";
 import { summarizeActivity } from "./activity";
 
@@ -136,6 +136,17 @@ describe("generateAgentMessage", () => {
     expect(call.model).toBe("claude-haiku-4-5");
   });
 
+  it("posts a notice instead of throwing when the AI provider fails", async () => {
+    const failing = { complete: async () => { throw new Error("LLM API error 429"); } } as unknown as MockAIProvider;
+    const result = await generateAgentMessage({
+      provider: failing, persona, agent, guards, events: [start], now: now(1),
+      problem: { title: "Why?", brief: "b", managerName: "Priya" },
+      instruction: replyInstruction("hi"),
+      mock: "x",
+    });
+    expect(result).toEqual({ text: AI_UNAVAILABLE, blocked: false });
+  });
+
   it("runs the reply through the leak guard", async () => {
     const result = await generateAgentMessage({
       provider: new MockAIProvider(), persona, agent, guards, events: [start], now: now(1),
@@ -192,6 +203,29 @@ describe("evaluation", () => {
     // No keywords (communication here): scored on effort only.
     expect(weak.criteria.find((c) => c.key === "communication")?.score).toBe(0);
     expect(heuristicEvaluation(rubric, { a: "x".repeat(150) }).criteria.find((c) => c.key === "communication")?.score).toBe(2);
+  });
+
+  it("falls back to the smaller model when the evaluator model is overloaded", async () => {
+    const models: string[] = [];
+    const provider = {
+      kind: "openai-compatible",
+      complete: async () => "",
+      completeStructured: async (req: { model: string; mockValue: unknown }) => {
+        models.push(req.model);
+        if (models.length === 1) throw new Error("LLM API error 503: high demand");
+        return req.mockValue;
+      },
+    } as unknown as MockAIProvider;
+    const result = await evaluateSubmission({
+      provider, rubric, truth: {}, analysis: {}, submission: { executiveSummary: "x", recommendation: "y" }, events: [start],
+    });
+    expect(models).toEqual(["claude-opus-5-5", "claude-haiku-4-5"]);
+    expect(result.gradedBy).toBe("ai");
+
+    const broken = { ...provider, completeStructured: async () => { throw new Error("LLM API error 401: bad key"); } } as unknown as MockAIProvider;
+    await expect(
+      evaluateSubmission({ provider: broken, rubric, truth: {}, analysis: {}, submission: { executiveSummary: "x" }, events: [start] })
+    ).rejects.toThrow(/401/);
   });
 });
 

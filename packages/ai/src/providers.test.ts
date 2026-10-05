@@ -48,6 +48,27 @@ describe("OpenAICompatibleProvider", () => {
     ).rejects.toThrow(/invalid structured output/);
   });
 
+  it("retries 429/503 briefly, but not errors that waiting can't fix", async () => {
+    const statuses = [503, 429, 200];
+    let calls = 0;
+    const impl = (async () => {
+      const status = statuses[calls++];
+      return status === 200
+        ? new Response(JSON.stringify({ choices: [{ message: { content: "ok" }, finish_reason: "stop" }] }))
+        : new Response("busy", { status });
+    }) as unknown as typeof fetch;
+    const waits: number[] = [];
+    const p = new OpenAICompatibleProvider("https://x/v1", "", impl, async (ms) => void waits.push(ms));
+    expect(await p.complete({ model: "m", system: "", user: "", maxTokens: 5 })).toBe("ok");
+    expect(waits).toEqual([1000, 3000]);
+
+    calls = 0;
+    const gone = (async () => { calls++; return new Response("model retired", { status: 404 }); }) as unknown as typeof fetch;
+    const p404 = new OpenAICompatibleProvider("https://x/v1", "", gone, async () => {});
+    await expect(p404.complete({ model: "m", system: "", user: "", maxTokens: 5 })).rejects.toThrow(/LLM API error 404/);
+    expect(calls).toBe(1);
+  });
+
   it("parses fenced or chatty JSON", () => {
     expect(parseJsonLoose('Sure! {"a": 1} hope that helps')).toEqual({ a: 1 });
     expect(parseJsonLoose("not json")).toBeUndefined();
@@ -75,8 +96,8 @@ describe("provider selection", () => {
     process.env.GEMINI_API_KEY = "g";
     expect(providerName()).toBe("gemini");
     expect(getAIProvider().kind).toBe("openai-compatible");
-    expect(agentModel()).toBe("gemini-2.5-flash-lite");
-    expect(evaluatorModel()).toBe("gemini-2.5-flash");
+    expect(agentModel()).toBe("gemini-3.5-flash-lite");
+    expect(evaluatorModel()).toBe("gemini-3.5-flash");
   });
 
   it("prefers Anthropic when its key is set, and env overrides models", () => {

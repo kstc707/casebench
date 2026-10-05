@@ -32,8 +32,8 @@ export const PRESETS: Record<string, Preset> = {
   gemini: {
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
     keyEnv: "GEMINI_API_KEY",
-    agentModel: "gemini-2.5-flash-lite",
-    evaluatorModel: "gemini-2.5-flash",
+    agentModel: "gemini-3.5-flash-lite",
+    evaluatorModel: "gemini-3.5-flash",
   },
   groq: {
     baseUrl: "https://api.groq.com/openai/v1",

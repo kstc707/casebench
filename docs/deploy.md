@@ -11,7 +11,7 @@ Casebench works with several providers, so pick one:
 
 | Option | Cost | Quality for this app | Notes |
 |---|---|---|---|
-| **Google Gemini** (`GEMINI_API_KEY`) | **Free tier** (Flash models, generous daily limits) | Good | **Recommended to start.** Key from Google AI Studio, no card. Free-tier prompts may be used by Google to improve products, so don't put private data in. |
+| **Google Gemini** (`GEMINI_API_KEY`) | **Free tier**: coworkers use `gemini-3.5-flash-lite` (~500 requests/day), grading uses `gemini-3.5-flash` (~20/day) | Good | **Recommended to start.** Key from Google AI Studio, no card. Free-tier prompts may be used by Google to improve products, so don't put private data in. |
 | **Groq** (`GROQ_API_KEY`) | Free tier | OK (open models) | Very fast; tight tokens-per-minute limit, so busy runs may throttle. |
 | **OpenRouter** (`OPENROUTER_API_KEY`) | Free `:free` models, ~50 requests/day | OK | Low daily cap; fine for demos. |
 | **Claude** (`ANTHROPIC_API_KEY`) | Pay-as-you-go, prepaid credits (about $5 minimum) | Best | ~$0.20–0.30 per full attempt (small model chats, top model grades). $5 ≈ 20 attempts. |
@@ -66,7 +66,8 @@ Every `git push` to `main` redeploys automatically. Pull requests get their own 
 |---|---|
 | Build fails with `DATABASE_URL is not set` | Env var missing or misspelled in Vercel → add it and redeploy |
 | Replies say "offline mode" | No AI key detected → check the variable name, then redeploy (env changes need a redeploy) |
-| `429` / rate-limit errors in Vercel logs | Free-tier limit hit → wait, or switch provider |
+| `429` / rate-limit errors in Vercel logs, or coworkers reply "Couldn't reach the AI service" | Free-tier limit hit → wait, set `CASEBENCH_EVALUATOR_MODEL=gemini-3.5-flash-lite` for more gradings per day, or switch provider |
+| `LLM API error 404 … model … no longer available` | The provider retired a model → set `CASEBENCH_AGENT_MODEL` / `CASEBENCH_EVALUATOR_MODEL` to the model the error suggests, redeploy, and update the defaults in `packages/ai/src/config.ts` |
 | SQL console stuck on "Loading the data engine…" | The browser can't reach `cdn.jsdelivr.net` (some school/office networks). See "Self-hosting DuckDB" below. |
 | Grading times out | Hobby functions are capped at 300 s. Use a faster evaluator model (`CASEBENCH_EVALUATOR_MODEL`). |
 
