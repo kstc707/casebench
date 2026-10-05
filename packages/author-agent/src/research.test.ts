@@ -14,6 +14,7 @@ function fakeFetch(log: string[]) {
           { objectID: "1", title: "Postmortem: duplicate events inflated our metrics", url: "https://blog.example.com/postmortem", points: 300 },
           { objectID: "2", title: "Ask HN: why did our metrics drop?", story_text: `<p>${long("Our events were logged twice and conversion fell.")}</p>`, points: 120 },
           { objectID: "4", title: "Show HN: my sourdough recipe", story_text: `<p>${long("Flour, water, salt.")}</p>`, points: 900 },
+          { objectID: "5", title: "Launch HN: a dashboard for duplicate events metrics", story_text: `<p>${long("Buy our duplicate events metrics tool.")}</p>`, points: 800 },
           { objectID: "3", title: "Internal link", url: "https://localhost/admin", points: 50 },
         ],
       });
@@ -39,7 +40,7 @@ describe("research", () => {
     expect(sources[0].text).not.toContain("evil()");
     expect(sources[1].url).toBe("https://news.ycombinator.com/item?id=2"); // self-post text used directly
     expect(log.some((u) => u.includes("localhost"))).toBe(false);
-    expect(sources.map((s) => s.title).join()).not.toMatch(/sourdough|Latin/); // off-topic pages dropped
+    expect(sources.map((s) => s.title).join()).not.toMatch(/sourdough|Latin|Launch HN/); // off-topic pages and product launches dropped
     expect(log.find((u) => u.includes("algolia"))).toContain("optionalWords="); // every word optional, so specific queries still find things
   });
 

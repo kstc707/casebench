@@ -87,7 +87,8 @@ export async function searchHackerNews(f: Fetch, query: string, limit = 6): Prom
     `https://hn.algolia.com/api/v1/search?query=${q}&optionalWords=${q}&tags=story&hitsPerPage=${limit * 3}`
   );
   return (data?.hits ?? [])
-    .filter((h) => h.title)
+    // Product launches ("Show HN", "Launch HN") are rarely about real problems; skip them.
+    .filter((h) => h.title && !/^(show|launch) hn\b/i.test(h.title))
     .map((h) => ({
       title: h.title!,
       url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,

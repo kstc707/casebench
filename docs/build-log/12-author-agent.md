@@ -74,6 +74,12 @@ agent correctly refused to write anything. Two fixes:
 7. The brief accepts sources that show the same **kind** of problem (same mechanism or symptom),
    not only the exact scenario.
 
+The fourth live run worked: the topic "API latency regression after a deploy" pulled three real
+postmortems (CircleCI: a database upgrade left query statistics stale; Cloudflare: a new rule exposed a
+latent bug; Spotify: no exponential backoff caused a retry storm), and the draft's two SQL checks
+passed on its data and failed without the planted cause. Two "Show HN"/"Launch HN" product posts
+still got into the source list (unused by the brief), so those are now skipped.
+
 ## Safety
 
 - **Fetched pages are untrusted.** They're wrapped as quoted `<source>` material, and the prompt says to
