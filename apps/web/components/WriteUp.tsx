@@ -69,6 +69,12 @@ export function WriteUp({
 
   return (
     <div className="writeup">
+      <div>
+        <h1 className="doc-title">Your write-up</h1>
+        <p className="muted" style={{ margin: "4px 0 0" }}>
+          {locked ? "Submitted. It's on the Feedback page." : "Drafts save automatically. Your manager reads this, so lead with the answer."}
+        </p>
+      </div>
       {sections.map((f) => (
         <label key={f.key}>
           {f.label}

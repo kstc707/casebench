@@ -14,6 +14,8 @@ import { Community } from "./Community";
 import { DEFAULT_DELIVERABLE, KNOWN_ROLES } from "@casebench/domain";
 import type { ClientSafeCaseStudy, PublicPersona, RunDetail, ScoredEvaluation, Submission } from "./types";
 import { requireProfile } from "./Profile";
+import { Shell } from "./Shell";
+import { RoleLabel } from "./Discover";
 
 type App = "sql" | "writeup" | "feedback";
 type View = { kind: "channel" } | { kind: "dm"; id: string } | { kind: "app"; app: App };
@@ -127,6 +129,14 @@ function Workday({
 
   return (
     <div className={`app ${view.kind === "app" ? "with-dock" : ""}`}>
+      <div className="app-top">
+        <span>
+          <Link href="/">Casebench</Link> › <Link href={`/problems/${problem.slug}`}>{problem.title}</Link>
+        </span>
+        <span>
+          <strong>{minutes} min</strong> in · ~{problem.estimatedMinutes} min expected
+        </span>
+      </div>
       <nav className="sidebar" aria-label="Workspace">
         <div className="ws-name">
           <strong>{companyName}</strong>
@@ -158,7 +168,7 @@ function Workday({
         {!evaluation && (
           <div style={{ padding: "8px 12px" }}>
             <button
-              style={{ width: "100%" }}
+              className="stuck"
               disabled={stuckBusy}
               title="Ask the coworker you're talking to (or your manager) for one stronger hint"
               onClick={async () => {
@@ -177,13 +187,12 @@ function Workday({
                 }
               }}
             >
-              {stuckBusy ? "Asking…" : "🆘 I'm stuck"}
+              {stuckBusy ? "Asking…" : "I'm stuck: ask for a hint"}
             </button>
           </div>
         )}
         <div className="sidebar-foot">
-          <Link href="/">Casebench</Link>
-          <span>{minutes} min in</span>
+          <Link href="/">← Leave workspace</Link>
         </div>
       </nav>
 
@@ -317,37 +326,88 @@ function StartScreen({
   onStart: () => void;
   error: string | null;
 }) {
+  const company = problem.companyName ?? titleCase(problem.company);
+  const manager = personas.find((p) => p.role === "manager");
   return (
-    <main className="page">
-      <Link href="/">← All simulations</Link>
-      <p className="muted" style={{ margin: "24px 0 4px" }}>
-        {problem.companyName ?? titleCase(problem.company)} · {KNOWN_ROLES[problem.role] ?? problem.role} · {problem.estimatedMinutes} min
-      </p>
-      <h1 style={{ margin: 0 }}>{problem.title}</h1>
-      <p style={{ maxWidth: 680 }}>{problem.brief}</p>
-      <div className="card" style={{ display: "grid", gap: 12, maxWidth: 680 }}>
-        <strong>Your team today</strong>
-        {personas.map((p) => (
-          <div key={p.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <Avatar persona={p} /> <span><strong>{p.name}</strong><br /><span className="muted">{p.title}</span></span>
+    <Shell
+      active="problems"
+      crumbs={
+        <>
+          <Link href="/">Problems</Link> / {KNOWN_ROLES[problem.role] ?? problem.role} / <strong>{company}</strong>
+        </>
+      }
+    >
+      <main className="page">
+        <div className="ticket">
+          <div>
+            <RoleLabel role={problem.role} />
+            <h1>{problem.title}</h1>
+            <section className="doc">
+              <h2 style={{ marginTop: 0 }}>Description</h2>
+              {manager && (
+                <div className="muted" style={{ fontSize: 13, marginBottom: 6 }}>
+                  From {manager.name}, {manager.title}
+                </div>
+              )}
+              <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{problem.brief}</p>
+
+              <h2>What you'll practise</h2>
+              <ul style={{ paddingLeft: 20, margin: 0 }}>
+                {problem.concepts.map((c) => (
+                  <li key={c.name} style={{ marginBottom: 4 }}>
+                    <strong>{c.name}</strong> <span className="muted">— {c.blurb}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <h2>Activity</h2>
+              <Community slug={problem.slug} />
+            </section>
           </div>
-        ))}
-        <p className="muted" style={{ margin: 0 }}>
-          They're AI coworkers. They'll message you on Slack, notice what you're working on, and answer questions —
-          but they won't do the analysis for you. Each of them knows different things.
-        </p>
-      </div>
-      {run?.status === "published" && (
-        <p>Your last attempt is published: <Link href={`/portfolio/${run.id}`}>view it</Link>.</p>
-      )}
-      <button className="primary" onClick={onStart} style={{ margin: "20px 0", padding: "10px 18px" }}>
-        {run ? "Start a new attempt" : "Start the simulation"}
-      </button>
-      {error && <p className="error">{error}</p>}
-      <div style={{ maxWidth: 680 }}>
-        <Community slug={problem.slug} />
-      </div>
-    </main>
+
+          <aside className="side">
+            <button className="primary" onClick={onStart} style={{ padding: "10px 16px", fontSize: 15 }}>
+              {run ? "Start a new attempt" : `Join ${company}'s workspace`}
+            </button>
+            {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
+            {run?.status === "published" && (
+              <p style={{ margin: 0, fontSize: 14 }}>
+                Your last attempt is published: <Link href={`/portfolio/${run.id}`}>view it</Link>.
+              </p>
+            )}
+            <div className="props">
+              <h3>Details</h3>
+              <div className="prop"><span>Company</span><span>{company}</span></div>
+              <div className="prop"><span>Team</span><span><RoleLabel role={problem.role} /></span></div>
+              <div className="prop"><span>Estimate</span><span>{problem.estimatedMinutes} min</span></div>
+              <div className="prop"><span>Difficulty</span><span style={{ textTransform: "capitalize" }}>{problem.difficulty}</span></div>
+              <div className="prop"><span>Hand in</span><span>{(problem.deliverable ?? DEFAULT_DELIVERABLE).length}-part write-up</span></div>
+              {problem.dataFiles.length > 0 && (
+                <div className="prop"><span>Data</span><span>{problem.dataFiles.length} table{problem.dataFiles.length === 1 ? "" : "s"} (SQL)</span></div>
+              )}
+            </div>
+            <div className="props">
+              <h3>Your team</h3>
+              <div style={{ padding: "4px 14px 8px" }}>
+                {personas.map((p) => (
+                  <div key={p.id} className="person">
+                    <Avatar persona={p} />
+                    <span>
+                      <strong>{p.name}</strong>
+                      <small>{p.title}{p.role === "manager" ? " · your manager" : ""}</small>
+                    </span>
+                  </div>
+                ))}
+                <p className="muted" style={{ fontSize: 13, margin: "6px 0 0" }}>
+                  AI coworkers. They message you, notice what you're doing and answer questions, but won't do the work
+                  for you. Each knows different things.
+                </p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </Shell>
   );
 }
 

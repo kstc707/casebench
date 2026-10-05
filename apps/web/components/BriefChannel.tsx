@@ -33,6 +33,7 @@ export function BriefChannel({
             </span>
           </div>
           <div className="pinned">
+            <div className="pin-tag">📌 Pinned by {manager?.name.split(" ")[0] ?? "your manager"}</div>
             <div className="msg-text">{problem.brief}</div>
           </div>
           {problem.resources.map((r) => (
@@ -43,11 +44,17 @@ export function BriefChannel({
                 if ((e.target as HTMLDetailsElement).open) onOpenResource(r.title);
               }}
             >
-              <summary>📄 {r.title}</summary>
+              <summary>
+                <span className="file-ico" aria-hidden>{/dictionary|schema|data/i.test(r.title) ? "TBL" : "DOC"}</span>
+                <span>
+                  {r.title}
+                  <span className="muted" style={{ display: "block", fontWeight: 400, fontSize: 12 }}>Click to open</span>
+                </span>
+              </summary>
               <pre>{r.content}</pre>
             </details>
           ))}
-          <div className="attachment" style={{ padding: "9px 12px" }}>
+          <div className="attachment" style={{ padding: "10px 14px" }}>
             <strong>Skills this exercises</strong>
             <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
               {problem.concepts.map((c) => (

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ProfileChip } from "./Profile";
 
 interface Job {
   id: string;
@@ -80,10 +79,6 @@ export function AgentConsole() {
 
   return (
     <main className="page" style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-        <Link href="/">← Casebench</Link>
-        <ProfileChip />
-      </div>
       <div>
         <h1 style={{ marginBottom: 4 }}>Author agent</h1>
         <p className="muted" style={{ marginTop: 0, maxWidth: 760 }}>

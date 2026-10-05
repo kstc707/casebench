@@ -48,7 +48,8 @@ export function ChatView({
             </div>
           </div>
         )}
-        {messages.length === 0 && compact && <p className="muted">No messages yet.</p>}
+        {messages.length === 0 && compact && <p className="muted" style={{ padding: "0 20px" }}>No messages yet.</p>}
+        {messages.length > 0 && <div className="day">Today</div>}
         {messages.map((m, i) => {
           const prev = messages[i - 1];
           const cont = prev && prev.from === m.from && Date.parse(m.at) - Date.parse(prev.at) < 5 * 60_000;
@@ -89,9 +90,12 @@ export function ChatView({
               }
             }}
           />
-          <button className="primary" onClick={send} disabled={waiting || !draft.trim()} aria-label="Send">
-            Send
-          </button>
+          <div className="composer-bar">
+            <span>{compact ? "" : "Enter to send · Shift + Enter for a new line"}</span>
+            <button className="primary" onClick={send} disabled={waiting || !draft.trim()} aria-label="Send">
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>
