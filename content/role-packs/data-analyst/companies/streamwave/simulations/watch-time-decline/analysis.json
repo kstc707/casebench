@@ -1,0 +1,131 @@
+{
+  "rows": {
+    "sessions": 19045,
+    "dedupedSessions": 17794,
+    "users": 1141
+  },
+  "duplicates": {
+    "duplicateRows": 1251,
+    "afterFixDate": 1,
+    "nonMobile": 0,
+    "shareOfMobileSessionsBeforeFix": 34.4
+  },
+  "weekly": {
+    "raw": [
+      {
+        "week": 1,
+        "activeUsers": 618,
+        "minutes": 90584,
+        "minutesPerActiveUser": 146.6
+      },
+      {
+        "week": 2,
+        "activeUsers": 623,
+        "minutes": 90492,
+        "minutesPerActiveUser": 145.3
+      },
+      {
+        "week": 3,
+        "activeUsers": 629,
+        "minutes": 89729,
+        "minutesPerActiveUser": 142.7
+      },
+      {
+        "week": 4,
+        "activeUsers": 627,
+        "minutes": 95978,
+        "minutesPerActiveUser": 153.1
+      },
+      {
+        "week": 5,
+        "activeUsers": 686,
+        "minutes": 83670,
+        "minutesPerActiveUser": 122
+      },
+      {
+        "week": 6,
+        "activeUsers": 740,
+        "minutes": 86156,
+        "minutesPerActiveUser": 116.4
+      },
+      {
+        "week": 7,
+        "activeUsers": 814,
+        "minutes": 93561,
+        "minutesPerActiveUser": 114.9
+      },
+      {
+        "week": 8,
+        "activeUsers": 884,
+        "minutes": 95562,
+        "minutesPerActiveUser": 108.1
+      }
+    ],
+    "deduped": [
+      {
+        "week": 1,
+        "activeUsers": 618,
+        "minutes": 81891,
+        "minutesPerActiveUser": 132.5
+      },
+      {
+        "week": 2,
+        "activeUsers": 623,
+        "minutes": 82214,
+        "minutesPerActiveUser": 132
+      },
+      {
+        "week": 3,
+        "activeUsers": 629,
+        "minutes": 81977,
+        "minutesPerActiveUser": 130.3
+      },
+      {
+        "week": 4,
+        "activeUsers": 627,
+        "minutes": 88143,
+        "minutesPerActiveUser": 140.6
+      },
+      {
+        "week": 5,
+        "activeUsers": 686,
+        "minutes": 83670,
+        "minutesPerActiveUser": 122
+      },
+      {
+        "week": 6,
+        "activeUsers": 740,
+        "minutes": 86156,
+        "minutesPerActiveUser": 116.4
+      },
+      {
+        "week": 7,
+        "activeUsers": 814,
+        "minutes": 93538,
+        "minutesPerActiveUser": 114.9
+      },
+      {
+        "week": 8,
+        "activeUsers": 884,
+        "minutes": 95562,
+        "minutesPerActiveUser": 108.1
+      }
+    ]
+  },
+  "changePct": {
+    "rawAllUsers": -21.5,
+    "dedupedAllUsers": -13.8,
+    "dedupedExistingUsers": -5.1,
+    "dedupedExistingControl": -0.8,
+    "dedupedExistingTreatment": -9.9
+  },
+  "campaign": {
+    "shareOfActiveUsersWeeks5to8Pct": 14.6,
+    "minutesPerActiveUserWeeks5to8": 46.7,
+    "existingUsersMinutesPerActiveUserWeeks5to8": 128
+  },
+  "experiment": {
+    "tvMinutesPerSessionControl": 59.3,
+    "tvMinutesPerSessionTreatment": 49.3
+  }
+}

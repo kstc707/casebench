@@ -1,39 +1,29 @@
 # Roadmap
 
-## Built (in the prototype)
+## Done
 
-- [x] Problem dashboard across 3 role tracks (Data Analyst, Data Scientist, Software Engineer)
-- [x] Case-study workspace: brief, data explorer, resources, journal, discussion tabs
-- [x] In-browser SQL sandbox over embedded CSVs
-- [x] Coding workspace: code editor + deterministic test runner
-- [x] AI manager chat persona per company
-- [x] Rubric-based AI evaluation (case studies) and hybrid deterministic + AI evaluation (coding)
-- [x] "Concepts you'll practice" callouts per problem
-- [x] Portfolio summary generation
-- [x] Hidden truth-model isolation, verified not to leak to the client
+- [x] Run backbone: Postgres event log, migrations, run API, anonymous identity (build log 01)
+- [x] Seeded StreamWave dataset with a truth model proven by tests (02)
+- [x] Workspace with DuckDB-WASM SQL sandbox; every query logged (03)
+- [x] AI coworkers: personas, split knowledge, proactive triggers, hint levels, leak guard (04)
+- [x] Grader agent with structured outputs; public portfolio page (05)
+- [x] Agent eval script (adversarial probes, leak rate before/after guard)
+- [x] Any AI provider incl. free tiers; browser-only deploys (06)
+- [x] Slack-first dark UI (07)
+- [x] Scenario Studio + multi-role engine + UX-designer case (08)
 
-## Next
+## Next (in priority order)
 
-- [x] Scaffold the modular Next.js + Postgres app from `docs/architecture.md` — domain entities,
-      event-log state machine, Postgres schema + immutability triggers, AI provider abstraction,
-      content loader with truth-model stripping, dashboard + stub problem page (see
-      `docs/adr/0001-rebuild-modular-app.md`)
-- [ ] Replace the placeholder watch-time-decline data/truth-model with a real, internally
-      consistent dataset (see that simulation's `data/NOTE.md`)
-- [ ] Port the data explorer / SQL sandbox from the prototype into the problem page
-- [ ] Port the manager chat (using `packages/ai`'s prompt builders) into the problem page
-- [ ] Port the code editor + deterministic test runner for the coding track
-- [ ] Wire up the submission + evaluation flow end-to-end (case-study and coding)
-- [ ] Add the second role-pack content (data-scientist/experiment-readout,
-      software-engineer/dedupe-session-events) using the same structure
-- [ ] Set up Postgres locally/in CI and wire `packages/database` into the app for real run
-      persistence (currently there's no persistence layer wired up yet)
-- [ ] Account system + persistent portfolio (currently a single in-session run)
-- [ ] More companies/role tracks beyond the current StreamWave-based set
-- [ ] Decide on a stable product name (working names so far: "Project Codename", "Casebench")
+- [ ] Deploy (Vercel + Neon) and run the agent eval with a real key; commit the report
+- [ ] Rate limiting on AI-backed routes before sharing the link publicly
+- [ ] Grader calibration set: hand-graded strong / weak / confidently-wrong submissions
+- [ ] Usage analytics view: how real users approach the case (did they dedupe? ask Sam?)
+- [ ] Moderation for Community listings (report / owner approval) and rate limits on scenario creation
+- [ ] Port the coding track (editor + deterministic test runner) from the prototype
+- [ ] Accounts + multi-run portfolios (replace the anonymous cookie)
+- [ ] Server-sent events instead of polling, if concurrency grows
 
 ## Open questions
 
-- How much of the manager-persona hint policy should be user-configurable (e.g. "harder mode")?
-- Should the coding track support languages beyond JS, and if so, how does the deterministic
-  test runner generalize safely?
+- Should hint policy be user-configurable ("harder mode")?
+- Voice: a spoken stand-up with the manager (speech-to-text in, text-to-speech out)?

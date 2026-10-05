@@ -1,10 +1,81 @@
 {
   "problemSlug": "watch-time-decline",
+  "scale": {
+    "min": 0,
+    "max": 4
+  },
   "criteria": [
-    { "key": "data_quality_check", "label": "Data quality check", "description": "Did they notice and account for the duplicate mobile events before trusting the aggregate trend?", "weight": 0.25 },
-    { "key": "segmentation", "label": "Segmentation", "description": "Did they break the trend down by relevant segments rather than stopping at the aggregate?", "weight": 0.25 },
-    { "key": "causal_reasoning", "label": "Causal reasoning", "description": "Did they distinguish correlation with the experiment from a demonstrated cause?", "weight": 0.25 },
-    { "key": "recommendation", "label": "Recommendation", "description": "Is the recommendation specific, actionable, and justified by what the data actually shows?", "weight": 0.15 },
-    { "key": "communication", "label": "Communication", "description": "Is the write-up clear and appropriately hedged given the evidence?", "weight": 0.10 }
+    {
+      "key": "framing",
+      "label": "Problem framing",
+      "weight": 0.1,
+      "description": "Defines the metric, time windows, and the decision leadership needs.",
+      "weak": "Jumps straight into numbers without restating what is being measured or why.",
+      "strong": "States the metric, compares like-for-like windows, and frames the decision (real vs. artifact, which team acts).",
+      "offlineKeywords": [
+        "per active user|active user",
+        "week|period|window"
+      ]
+    },
+    {
+      "key": "data_quality",
+      "label": "Data quality",
+      "weight": 0.25,
+      "description": "Finds and handles the duplicate mobile events before trusting the trend.",
+      "weak": "Takes the sessions table at face value.",
+      "strong": "Identifies re-sent mobile events tied to app 5.2.0, deduplicates with a sensible rule, and re-measures the decline.",
+      "offlineKeywords": [
+        "duplicat|dedup|double[- ]count|re-?sen",
+        "5\\.2|app version|app_version|mobile"
+      ]
+    },
+    {
+      "key": "segmentation",
+      "label": "Segmentation",
+      "weight": 0.25,
+      "description": "Splits the trend by acquisition cohort, device, and experiment arm.",
+      "weak": "Reports only the overall average.",
+      "strong": "Shows existing users are roughly flat while campaign users are low-engagement, and isolates the experiment arm effect.",
+      "offlineKeywords": [
+        "cohort|segment|campaign|paid[_ ]social|acquisition",
+        "arm|treatment|control|device|tv"
+      ]
+    },
+    {
+      "key": "reasoning",
+      "label": "Causal reasoning",
+      "weight": 0.2,
+      "description": "Separates three simultaneous changes instead of blaming one.",
+      "weak": "Attributes the whole decline to one cause because it lines up in time.",
+      "strong": "Distinguishes measurement artifact, mix shift, and treatment effect, with rough sizes and stated uncertainty.",
+      "offlineKeywords": [
+        "artifact|measurement|mix|composition",
+        "experiment|autoplay"
+      ]
+    },
+    {
+      "key": "recommendation",
+      "label": "Recommendation",
+      "weight": 0.1,
+      "description": "Concrete next steps with owners.",
+      "weak": "\"Improve engagement.\"",
+      "strong": "Fix/annotate the metric (data eng), cohort-based reporting (analytics), review autoplay_next_v2 before rollout (product).",
+      "offlineKeywords": [
+        "recommend|should|next step",
+        "owner|team|data eng|product|analytics"
+      ]
+    },
+    {
+      "key": "communication",
+      "label": "Communication",
+      "weight": 0.1,
+      "description": "Decision-ready summary with evidence and caveats.",
+      "weak": "Long dump of queries with no bottom line.",
+      "strong": "Short summary up front, evidence table, explicit caveats, clear action order.",
+      "offlineKeywords": [
+        "summary|bottom line|in short|tl;?dr|\\.",
+        "caveat|uncertain|confiden|assum"
+      ]
+    }
   ]
 }

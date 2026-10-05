@@ -1,13 +1,21 @@
-import type { AIProvider, ChatMessage } from "./provider";
+import type { AIProvider, CompletionRequest, StructuredRequest } from "./provider";
 
 /**
- * Returns canned responses so UI/content work doesn't require a live API
- * key. Not meant to produce realistic manager/evaluator behavior — just
- * enough to exercise the surrounding code paths.
+ * Offline stand-in used when no API key is configured (local dev, tests, CI).
+ * Returns whatever the caller said the mock should return, so every code path
+ * around the model still runs for real.
  */
 export class MockAIProvider implements AIProvider {
-  async complete(messages: ChatMessage[]): Promise<string> {
-    const last = messages[messages.length - 1];
-    return `[mock response to]: ${last?.content.slice(0, 80) ?? ""}`;
+  readonly kind = "mock" as const;
+  readonly calls: Array<CompletionRequest | StructuredRequest<unknown>> = [];
+
+  async complete(req: CompletionRequest): Promise<string> {
+    this.calls.push(req);
+    return req.mock ?? "(offline mode — set ANTHROPIC_API_KEY for real agent replies)";
+  }
+
+  async completeStructured<T>(req: StructuredRequest<T>): Promise<T> {
+    this.calls.push(req as StructuredRequest<unknown>);
+    return req.mockValue;
   }
 }

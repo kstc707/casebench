@@ -1,6 +1,8 @@
+import "./globals.css";
+
 export const metadata = {
   title: "Casebench",
-  description: "AI-powered professional work simulations",
+  description: "Practice the job before you have the job: AI coworkers, messy data, real feedback.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

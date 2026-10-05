@@ -1,0 +1,4 @@
+campaign_id,name,channel,start_date,end_date,target_segment
+mc01,Spring Referral Bonus,referral,2026-03-02,2026-04-26,existing subscribers
+mc02,Back Catalog Email,email,2026-06-08,2026-06-21,lapsed users
+mc03,Summer Free Month,paid_social,2026-08-03,2026-08-30,new users 18-24

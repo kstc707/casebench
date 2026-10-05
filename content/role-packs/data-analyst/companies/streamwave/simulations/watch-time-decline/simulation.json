@@ -3,29 +3,81 @@
   "slug": "watch-time-decline",
   "role": "data-analyst",
   "company": "streamwave",
+  "companyName": "StreamWave",
+  "channel": "watch-time-drop",
   "title": "Why is watch time declining?",
   "difficulty": "medium",
-  "estimatedMinutes": 60,
+  "estimatedMinutes": 90,
   "concepts": [
-    { "name": "Deduplication", "blurb": "Real event logs double-count; learn to spot and remove it before trusting a metric." },
-    { "name": "Segmentation", "blurb": "An aggregate trend can hide an opposite trend in a subgroup." },
-    { "name": "Causal vs. correlational reasoning", "blurb": "Practice distinguishing 'happened at the same time' from 'caused it'." }
+    {
+      "name": "Data quality & deduplication",
+      "blurb": "Event logs double-count. Find and remove re-sent events before trusting any trend."
+    },
+    {
+      "name": "Mix shift (composition effects)",
+      "blurb": "An average can fall because WHO is in it changed, not because anyone behaves differently."
+    },
+    {
+      "name": "Segmentation",
+      "blurb": "Split by cohort, device, and experiment arm to see where the change actually lives."
+    },
+    {
+      "name": "Correlation vs. causation",
+      "blurb": "Three things changed on the same day. Separate them before blaming one."
+    },
+    {
+      "name": "Executive communication",
+      "blurb": "Turn the analysis into a decision: what happened, how sure you are, who acts next."
+    }
   ],
-  "brief": "Our overall watch time per user is down ~8% over the last month and leadership wants to know why before the board meeting. You have the user, session, content, subscription, and experiment tables. Figure out what's actually going on and give me a recommendation.",
+  "brief": "Weekly watch time per active user is down about 21% when I compare the last four weeks (Aug 3–30) to the four weeks before (Jul 6–Aug 2). Sign-ups are actually up, which makes this more confusing. Leadership meets Thursday and wants to know whether this is a real engagement problem and which team should act. You have users, sessions, content, subscriptions, experiments, and marketing_campaigns. Dig in and send me your findings and a recommendation.",
   "resources": [
-    { "title": "Data dictionary", "content": "users.csv: one row per user. sessions.csv: one row per viewing session (NOTE: mobile client is known to occasionally double-send events). content.csv: catalog metadata. subscriptions.csv: plan + status per user. experiments.csv: active A/B test assignments per user." }
+    {
+      "title": "Data dictionary",
+      "content": "users — one row per account: user_id, signup_date, plan, region, age_band, acquisition_channel.\nsessions — one row per play event received by the analytics pipeline: session_id, user_id, content_id, device (mobile/web/tv), app_version (mobile only), started_at (UTC), minutes_watched.\ncontent — catalog: content_id, title, genre, is_original, release_date.\nsubscriptions — current plan and status per user: plan, is_trial, status, started_at, cancelled_at.\nexperiments — A/B assignments: user_id, experiment, arm, assigned_at.\nmarketing_campaigns — campaign_id, name, channel, start_date, end_date, target_segment."
+    },
+    {
+      "title": "Metric definition: watch time per active user",
+      "content": "For a given week (Mon–Sun, UTC): total minutes_watched across all sessions, divided by the number of distinct users with at least one session that week. Dashboard source: sessions table, no filters."
+    },
+    {
+      "title": "Release calendar (Jul–Aug)",
+      "content": "Jul 14 — web player 3.8 (UI polish)\nJul 28 — TV app 2.4 (bug fixes)\nAug 3 — mobile app 5.3.0 (\"stability and analytics improvements\")\nAug 17 — web player 3.9 (accessibility)"
+    }
   ],
   "dataFiles": [
     "data/users.csv",
     "data/sessions.csv",
     "data/content.csv",
     "data/subscriptions.csv",
-    "data/experiments.csv"
+    "data/experiments.csv",
+    "data/marketing_campaigns.csv"
   ],
   "truthModel_INTERNAL_DO_NOT_EXPOSE_TO_USER": {
-    "summary": "PLACEHOLDER — reconstructed scaffold, not the original truth model (lost along with the rest of the prior session's work). The original combined (a) a mobile-client duplicate-event bug inflating a prior period's numbers, making the 'decline' partly an artifact, and (b) a real decline concentrated in one segment correlated with a recently-launched experiment arm.",
-    "mobileDuplicateBugAffectedPriorPeriod": true,
-    "realDeclineSegment": "placeholder — e.g. users on experiment arm B",
-    "note": "Replace this whole object with a real, data-consistent truth model before using this simulation for an actual evaluation — see docs/concept-brief.md § 5 on test/truth rigor."
+    "summary": "The -21.5% headline decline is three things that all started on Aug 3. (1) Measurement artifact: mobile app 5.2.0 re-sent ~34% of mobile play events (duplicate rows seconds apart, new session_id); 5.3.0 fixed it on Aug 3, so the BEFORE period was inflated. Deduplicating shrinks the decline to about -13.8%. (2) Mix shift: the 'Summer Free Month' paid_social campaign (Aug 3-30) added young, mobile-heavy trial users who watch ~47 min/week vs ~128 for existing users; they are ~15% of active users in weeks 5-8. Existing users in the experiment control arm are flat (-0.8%). (3) Small real product effect: experiment autoplay_next_v2 (existing users, from Aug 3) turned autoplay off for the treatment arm, cutting TV minutes per session from ~59 to ~49; existing treatment users are down ~10% while control is flat.",
+    "drivers": [
+      {
+        "name": "Duplicate mobile events before Aug 3",
+        "approxShareOfHeadline": "~8 of 21.5 points",
+        "evidence": "Rows with same user_id + content_id + device within 120s, all app_version 5.2.0, none after Aug 3 except chance collisions."
+      },
+      {
+        "name": "Campaign acquisition mix",
+        "approxShareOfHeadline": "largest real driver, ~9 points",
+        "evidence": "paid_social users signed up Aug 3-30; far lower minutes per active user; existing control users flat."
+      },
+      {
+        "name": "autoplay_next_v2 treatment arm",
+        "approxShareOfHeadline": "~4-5 points",
+        "evidence": "Treatment vs control among existing users; effect concentrated on TV."
+      }
+    ],
+    "redHerrings": [
+      "plan label casing (basic vs Basic) from a billing migration",
+      "missing genre labels",
+      "home_row_ranking experiment (finished in May)",
+      "web/TV releases"
+    ],
+    "acceptanceNote": "A strong answer separates measurement artifact from behaviour change, quantifies each driver at least roughly, notices existing users are roughly flat, and recommends: fix the dashboard metric (dedupe / annotate), report engagement by acquisition cohort, and review autoplay_next_v2 before rollout. Well-supported alternative framings with caveats can still score high; this is not keyword matching."
   }
 }

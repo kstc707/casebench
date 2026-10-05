@@ -24,3 +24,11 @@ Casebench is early-stage and the architecture is still settling. Useful contribu
 
 Open an issue describing what you want to work on before a large PR — the content format and
 module boundaries are still likely to shift.
+
+## Adding a scenario
+
+You don't need to write code. Create it in the **Scenario Studio** (`/studio`), play-test it, and
+**Export** it. To propose it for the official catalogue, open an issue with the exported `.json`
+attached, or import it yourself with `pnpm --filter @casebench/content-tools import-scenario` and
+open a pull request. See [`docs/authoring-scenarios.md`](docs/authoring-scenarios.md).
+

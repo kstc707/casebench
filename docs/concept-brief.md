@@ -1,5 +1,8 @@
 # Casebench — Concept Brief (for AI handoff)
 
+> **Historical document.** Written before the rebuild as a hand-off brief. For how the system works
+> today, see [how-the-backend-works.md](how-the-backend-works.md) and the [build log](build-log/README.md).
+
 This document is meant to be handed to another AI assistant (or a new session of this one) with
 no other context, and have it understand what Casebench is, why it's built the way it is, and
 what to do next.

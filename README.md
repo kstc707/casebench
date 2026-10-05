@@ -1,84 +1,79 @@
 # Casebench
 
-> AI-powered professional work simulations — practice the job before you have the job.
+> Practice the job before you have the job: messy data, AI coworkers on Slack, and feedback graded
+> against what's actually true.
 
-Casebench puts you inside a realistic, messy, ambiguous work assignment: you get a brief from an
-AI "manager" persona, dig through real-shaped data, make a judgment call, submit a deliverable,
-and get a rubric-based evaluation plus a portfolio-ready writeup of what you did.
+You're dropped into a realistic analyst assignment at a fictional streaming company. Your manager
+(an AI agent) DMs you the ask. You query six real-looking tables with SQL in your browser. Your
+coworkers **watch what you're doing** and message you on their own: the data engineer pings you
+when you open the sessions table, your manager checks in after a few queries and asks for a status
+update when the VP is waiting. Each coworker knows a different slice of the truth, so you have to
+ask the right person the right question. When you submit, a grader agent scores your write-up
+against facts measured from the very data you saw, and against the queries you actually ran.
+Publish it, and you get a shareable portfolio page.
 
-It currently covers three role tracks, each with its own problem type:
+## What's in it
 
-| Track | Problem type | What you actually do |
-|---|---|---|
-| Data Analyst | Case study | Investigate a messy dataset (e.g. a streaming company's watch-time decline), find the real cause, write a recommendation |
-| Data Scientist | Case study | Read an experiment readout, catch confounds / sample ratio mismatches, decide ship-or-hold |
-| Software Engineer | Coding problem | Solve a LeetCode-style problem against hidden test cases, then get an AI code review on top of deterministic correctness |
+| Piece | What it is |
+|---|---|
+| **The case** | "Why is watch time declining?" — 19k-row seeded dataset with three overlapping causes (a duplicate-event bug, a campaign mix shift, an experiment), proven by tests |
+| **SQL sandbox** | DuckDB-WASM in a Web Worker: window functions, CTEs, `date_trunc`, no page freezes |
+| **AI coworkers** | Manager + data engineer with private knowledge, proactive triggers, hint levels unlocked in code, and a leak guard |
+| **Grader agent** | Structured-output scoring against the hidden truth + measured facts + your query log |
+| **Run event log** | Every action appended to Postgres; published runs frozen by database triggers |
+| **Portfolio page** | Public record: write-up, grade, every query, the Slack conversation |
+| **Scenario Studio** | Anyone can create a simulation for any role (UX, PM, analyst…) in the app, play it, and share it |
 
-## Status
+## Start here
 
-Two things exist side by side right now:
+- **[How it works](docs/how-the-backend-works.md)** — layers, which file is which, request walkthroughs
+- **[Build log](docs/build-log/README.md)** — every step: what, why, problems hit, how verified, interview notes
+- **[Market research](docs/market-research.md)** — who else does this, and an honest assessment
+- **[Writing a scenario](docs/authoring-scenarios.md)** — for designers, PMs, teachers: create your own case
+- **[Review pack](docs/review-pack-lite.md)** — the whole project in one file for an outside reviewer or AI chat ([full version with code](docs/review-pack.md); regenerate with `pnpm review-pack`)
+- **[Deploy](docs/deploy.md)** — Vercel + Neon + a free AI key, all from the browser
 
-1. **A working single-file prototype** (`prototype/casebench-demo.html`) — self-contained HTML/JS
-   with a problem dashboard, split workspace (brief/data explorer/resources/journal/discussion),
-   an in-browser SQL sandbox (`alasql`), a real code editor + deterministic test runner, and live
-   AI integration for manager chat / evaluation / portfolio summary. Its one real limitation: the
-   AI calls happen directly from the browser, so they only work inside an authenticated Claude
-   session (e.g. as a published Claude Artifact) — everything else works fully offline.
+## Running it
 
-2. **A modular app rebuild in progress** (`apps/`, `packages/`, `content/`), following
-   [`docs/architecture.md`](docs/architecture.md) — see
-   [`docs/adr/0001-rebuild-modular-app.md`](docs/adr/0001-rebuild-modular-app.md) for why this
-   exists as a separate rebuild rather than an edit to the prototype. Currently scaffolded:
-   domain entities + event-log state machine, Postgres schema with immutability triggers, an AI
-   provider abstraction (server-side this time), a content loader that strips the hidden truth
-   model before anything reaches the client, and a dashboard + stub problem page. Not yet ported:
-   the data explorer, manager chat, code editor, and the actual submission/evaluation flow — see
-   [`docs/roadmap.md`](docs/roadmap.md) for the current checklist.
+Needs Node 20+, pnpm, Postgres.
 
-   **Note:** the example content under `content/role-packs/data-analyst/.../watch-time-decline/`
-   currently uses placeholder data and a placeholder truth model (the originals were lost — see
-   that folder's `data/NOTE.md`). Don't treat it as real content yet.
+```bash
+pnpm install
+createdb casebench
+DATABASE_URL=postgres://localhost/casebench pnpm db:migrate
+cp .env.example apps/web/.env.local   # set DATABASE_URL; add an AI key (e.g. free GEMINI_API_KEY)
+pnpm dev                               # http://localhost:3000
+```
+
+AI works with Claude or free providers (Gemini, Groq, OpenRouter, local Ollama). See
+[`docs/deploy.md`](docs/deploy.md). Without any key everything still runs in **offline mode**: coworkers send their scripted
+messages and a canned reply, and grading uses a clearly-labelled keyword heuristic.
+
+**Tests:** `TEST_DATABASE_URL=postgres://localhost/casebench_test pnpm test` (create and migrate
+that database first; without it the Postgres tests are skipped). **Agent eval:**
+`pnpm --filter @casebench/agents eval` (needs an AI key).
 
 ## Repo layout
 
 ```
-casebench/
-  README.md / LICENSE / CONTRIBUTING.md
-  docs/
-    architecture.md      — design notes: event-log state machine, content-as-data role packs,
-                            hybrid deterministic+AI evaluation, anti-leakage prompt design
-    concept-brief.md     — self-contained conceptual overview (written for AI handoff)
-    roadmap.md           — what's built vs. what's next
-    adr/                 — architecture decision records
-  prototype/
-    casebench-demo.html  — the working single-file prototype described above
-  apps/web/              — Next.js app (dashboard + problem pages)
-  packages/
-    domain/              — core types + the event-log run state machine
-    database/            — Postgres schema (schema.sql) with immutability triggers
-    ai/                  — AI provider abstraction + manager/evaluator prompt builders
-    simulation-engine/    — loads content/role-packs/*, strips truth model before client exposure
-  content/role-packs/    — content-as-data: manager personas, case studies, rubrics, coding problems
+apps/web/                 Next.js app: pages, API routes, workspace UI
+packages/
+  domain/                 run state machine + shared types
+  database/               Postgres migrations, migration runner, run repository
+  agents/                 agent engine: triggers, hints, prompts, leak guard, grader (+ eval script)
+  ai/                     Claude (Anthropic SDK), OpenAI-compatible adapter (Gemini, Groq, …), offline mock
+  simulation-engine/      loads content, strips secrets before anything reaches the browser
+  content-tools/          seeded dataset generator + independent analyzer
+content/role-packs/       cases as data: personas, briefs, CSVs, agent configs, rubrics
+prototype/                the original single-file HTML prototype (behavioural reference)
+docs/                     how it works, build log, research, deploy guide, ADRs
 ```
 
-## Running things
+## Status
 
-**Prototype** (no build step): open `prototype/casebench-demo.html` in a browser.
-
-**Modular app** (in progress, needs `pnpm` and Node 20+):
-
-```bash
-pnpm install
-pnpm --filter @casebench/web dev
-```
-
-Postgres isn't wired into the app yet (see roadmap) — `packages/database/schema.sql` can be
-applied manually per that package's README if you want to experiment with it ahead of time.
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). This is an early-stage open-source project — issues,
-design feedback, and PRs rebuilding the modular architecture are all welcome.
+Two official cases (Data Analyst, UX Designer) plus anyone's Studio scenarios. Not yet ported from
+the prototype: the data scientist (experiment readout) and software engineer (coding) tracks. See
+[`docs/roadmap.md`](docs/roadmap.md).
 
 ## License
 

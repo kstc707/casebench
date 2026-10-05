@@ -1,46 +1,61 @@
 import Link from "next/link";
-import { getProblemsForDashboard } from "../lib/problems";
+import { KNOWN_ROLES } from "@casebench/domain";
+import { getCatalog, type CatalogEntry } from "../lib/problems";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const problems = await getProblemsForDashboard();
+  const catalog = await getCatalog();
+  const official = catalog.filter((c) => c.source === "official");
+  const community = catalog.filter((c) => c.source === "community");
 
   return (
-    <main style={{ maxWidth: 900, margin: "0 auto", padding: 24 }}>
-      <h1>Casebench</h1>
-      <p>Practice the job before you have the job.</p>
+    <main className="page">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <h1 style={{ margin: 0 }}>Casebench</h1>
+        <Link href="/studio" className="pill" style={{ padding: "6px 12px", textDecoration: "none" }}>
+          ✎ Scenario Studio — create your own
+        </Link>
+      </div>
+      <p className="muted">
+        Practice the job before you have the job. Work a realistic assignment while AI coworkers message you on Slack,
+        then get graded against what's actually true.
+      </p>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 24 }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
-            <th style={{ padding: 8 }}>Title</th>
-            <th style={{ padding: 8 }}>Role</th>
-            <th style={{ padding: 8 }}>Type</th>
-            <th style={{ padding: 8 }}>Difficulty</th>
-            <th style={{ padding: 8 }}>Est. time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {problems.length === 0 && (
-            <tr>
-              <td colSpan={5} style={{ padding: 16, color: "#888" }}>
-                No problems found under content/role-packs. Check the path and that each
-                simulation.json / problem.json is valid JSON.
-              </td>
-            </tr>
-          )}
-          {problems.map((p) => (
-            <tr key={p.slug} style={{ borderBottom: "1px solid #eee" }}>
-              <td style={{ padding: 8 }}>
-                <Link href={`/problems/${p.slug}`}>{p.title}</Link>
-              </td>
-              <td style={{ padding: 8 }}>{p.role}</td>
-              <td style={{ padding: 8 }}>{p.type}</td>
-              <td style={{ padding: 8 }}>{p.difficulty}</td>
-              <td style={{ padding: 8 }}>{p.estimatedMinutes} min</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <h2 style={{ fontSize: 16, marginTop: 28 }}>Official simulations</h2>
+      <Grid entries={official} />
+
+      <h2 style={{ fontSize: 16, marginTop: 28 }}>Community scenarios</h2>
+      {community.length ? (
+        <Grid entries={community} />
+      ) : (
+        <p className="muted">
+          None yet. <Link href="/studio">Create one in the Studio</Link> — any role, any company.
+        </p>
+      )}
     </main>
+  );
+}
+
+function Grid({ entries }: { entries: CatalogEntry[] }) {
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      {entries.map(({ problem: p, authorName, source }) => (
+        <Link key={p.slug} href={`/problems/${p.slug}`} className="card" style={{ textDecoration: "none", color: "inherit" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <strong style={{ fontSize: 16 }}>{p.title}</strong>
+            <span className="muted">
+              {KNOWN_ROLES[p.role] ?? p.role} · {p.difficulty} · ~{p.estimatedMinutes} min
+            </span>
+          </div>
+          {source === "community" && <div className="muted" style={{ fontSize: 12 }}>by {authorName || "anonymous"}</div>}
+          <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {p.concepts.map((c) => (
+              <span key={c.name} className="pill">{c.name}</span>
+            ))}
+          </div>
+        </Link>
+      ))}
+    </div>
   );
 }
