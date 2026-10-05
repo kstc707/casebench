@@ -29,3 +29,4 @@ if you want the big picture first.
 | 10 | [First live deploy, and the retired-model bug it caught](10-first-deploy.md) | `claude/gemini-3-5-models` |
 | 11 | [Profiles: who created it, who solved it, how many](11-profiles.md) | `claude/accounts` |
 | 12 | [The author agent: researches real problems and writes simulations](12-author-agent.md) | `claude/author-agent` |
+| 13 | [Redesign: a real workplace, not a generic AI dashboard](13-workplace-ui.md) | `claude/workplace-ui` |

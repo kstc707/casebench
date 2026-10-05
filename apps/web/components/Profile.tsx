@@ -12,6 +12,20 @@ import Link from "next/link";
 export interface ProfileInfo {
   handle: string;
   displayName: string;
+  isAdmin?: boolean;
+}
+
+const FACE_COLORS = ["#e01e5a", "#2eb67d", "#ecb22e", "#36c5f0", "#4a154b", "#1264a3", "#e8912d", "#7c3085"];
+
+/** A person's square initials avatar, colour stable per handle. */
+export function Face({ name, handle, large }: { name: string; handle: string; large?: boolean }) {
+  const hash = [...handle].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const initials = name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <span className={`face ${large ? "lg" : ""}`} style={{ background: FACE_COLORS[hash % FACE_COLORS.length] }} aria-hidden>
+      {initials}
+    </span>
+  );
 }
 
 const CHANGED = "cb:profile-changed";
@@ -51,26 +65,27 @@ export async function signOutProfile() {
   window.dispatchEvent(new Event(CHANGED));
 }
 
-/** Header chip: "@you" linking to your profile, or a "Create profile" button. */
+/** Who you are, in the sidebar: your face and name (→ profile), or "Create profile". */
 export function ProfileChip() {
   const p = useProfile();
   if (p === undefined) return null;
   if (!p) {
     return (
-      <button className="pill" style={{ padding: "6px 12px", cursor: "pointer" }} onClick={() => void requireProfile()}>
-        👤 Create profile
+      <button style={{ width: "100%" }} onClick={() => void requireProfile()}>
+        Create profile
       </button>
     );
   }
   return (
-    <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-      <Link className="pill" style={{ padding: "6px 12px" }} href={`/u/${p.handle}`}>
-        👤 {p.displayName}
+    <div className="me">
+      <Link href={`/u/${p.handle}`} title="Your profile">
+        <Face name={p.displayName} handle={p.handle} />
+        <span>{p.displayName}</span>
       </Link>
-      <button className="pill" style={{ padding: "6px 10px", cursor: "pointer" }} onClick={() => void signOutProfile()} title="Sign out on this device">
+      <button className="link" style={{ marginLeft: "auto", fontSize: 13 }} onClick={() => void signOutProfile()} title="Sign out on this device">
         Sign out
       </button>
-    </span>
+    </div>
   );
 }
 

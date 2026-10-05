@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { KNOWN_ROLES } from "@casebench/domain";
-import { ProfileChip, requireProfile } from "../Profile";
+import { requireProfile } from "../Profile";
+import { Shell } from "../Shell";
 
 interface Mine {
   attempts: number;
@@ -66,11 +67,8 @@ export function StudioHome() {
   return (
     <main className="page" style={{ display: "grid", gap: 20 }}>
       <div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-          <Link href="/">← Casebench</Link>
-          <ProfileChip />
-        </div>
-        <h1 style={{ marginBottom: 4 }}>Simulation Studio</h1>
+
+        <h1 style={{ marginBottom: 4 }}>Create a problem</h1>
         <p className="muted" style={{ marginTop: 0 }}>
           Create a realistic simulation of any kind of work — data, design, engineering, security, marketing, operations —
           for others to solve. Write the situation, invent the AI coworkers and what each of them knows, set the hidden

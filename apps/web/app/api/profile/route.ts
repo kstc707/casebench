@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { renameUser } from "@casebench/database";
 import { getPool } from "../../../lib/db";
 import { createProfile, getProfile, requireProfile } from "../../../lib/session";
+import { isAdmin } from "../../../lib/authorAgent";
 import { handleRouteError, jsonError, readJsonBody } from "../../../lib/api";
 
 export const dynamic = "force-dynamic";
@@ -11,11 +12,11 @@ const nameFrom = (b: unknown) => {
   return typeof name === "string" ? name.trim().replace(/\s+/g, " ").slice(0, 60) : "";
 };
 
-/** GET — who you are: { profile: { handle, displayName } | null }. */
+/** GET — who you are: { profile: { handle, displayName, isAdmin } | null }. */
 export async function GET() {
   try {
     const p = await getProfile();
-    return NextResponse.json({ profile: p && { handle: p.handle, displayName: p.displayName } });
+    return NextResponse.json({ profile: p && { handle: p.handle, displayName: p.displayName, isAdmin: isAdmin(p) } });
   } catch (err) {
     return handleRouteError(err);
   }

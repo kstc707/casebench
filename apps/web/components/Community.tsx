@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { requireProfile } from "./Profile";
+import { Face, requireProfile } from "./Profile";
+import { Priority } from "./Discover";
 
 interface Complexity {
   score: number;
@@ -94,7 +95,7 @@ export function Community({ slug, showRatePrompt }: { slug: string; showRateProm
     <div style={{ display: "grid", gap: 12 }}>
       <div className="card" style={{ display: "grid", gap: 10 }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <ComplexityBadge score={c.score} label={c.label} />
+          <Priority score={c.score} label={c.label} />
           <span className="muted">
             ~{c.expectedMinutes} min{c.minutesFromSolvers ? " (from solvers)" : " (creator's estimate)"}
             {c.observedWeight > 0 && ` · score ${Math.round(c.observedWeight * 100)}% from solver results`}
@@ -173,14 +174,16 @@ export function Community({ slug, showRatePrompt }: { slug: string; showRateProm
         </div>
         {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
         {data.comments.map((cm) => (
-          <div key={cm.id} style={{ borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+          <div key={cm.id} className="activity-item">
+            <Face name={cm.authorName} handle={cm.authorHandle ?? cm.authorName} />
+            <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13 }}>
               {cm.authorHandle ? (
-                <Link href={`/u/${cm.authorHandle}`}><strong>{cm.authorName}</strong></Link>
+                <Link href={`/u/${cm.authorHandle}`} style={{ color: "var(--text)" }}><strong>{cm.authorName}</strong></Link>
               ) : (
                 <strong>{cm.authorName}</strong>
               )}
-              {cm.authorFinished && <span className="pill" style={{ marginLeft: 6, fontSize: 11 }}>✓ solved it</span>}
+              {cm.authorFinished && <span className="label" style={{ marginLeft: 6, background: "var(--good-soft)", color: "var(--good)" }}>✓ solved it</span>}
               <span className="muted"> · {new Date(cm.createdAt).toLocaleDateString()}</span>
               {cm.mine && (
                 <button style={{ marginLeft: 8, padding: "0 6px", fontSize: 12 }} onClick={() => post(`/comments?id=${cm.id}`, undefined, "DELETE")}>
@@ -189,6 +192,7 @@ export function Community({ slug, showRatePrompt }: { slug: string; showRateProm
               )}
             </div>
             <div className="msg-text">{cm.body}</div>
+            </div>
           </div>
         ))}
       </div>

@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { KNOWN_ROLES } from "@casebench/domain";
-import { ComplexityBadge } from "./Community";
 
 export interface DiscoverItem {
+  /** Tracker-style key, e.g. CASE-3. */
+  key: string;
   slug: string;
   title: string;
   category: string;
@@ -16,6 +17,7 @@ export interface DiscoverItem {
   complexity: { score: number; label: string };
   expectedMinutes: number;
   attempts: number;
+  solvers: number;
   attemptsLast7Days: number;
   completionRate: number | null;
   likes: number;
@@ -24,7 +26,7 @@ export interface DiscoverItem {
 }
 
 type Sort = "trending" | "new" | "top" | "hardest";
-const SORTS: Array<[Sort, string]> = [["trending", "🔥 Trending"], ["new", "🆕 New"], ["top", "★ Top rated"], ["hardest", "◆ Hardest"]];
+const SORTS: Array<[Sort, string]> = [["trending", "Trending"], ["new", "Newest"], ["top", "Top rated"], ["hardest", "Hardest"]];
 
 /** Ratings shrink toward 3.5 until there are enough of them (so one 5★ doesn't top the chart). */
 const bayes = (avg: number | null, n: number) => ((avg ?? 3.5) * n + 3.5 * 3) / (n + 3);
@@ -53,42 +55,86 @@ export function Discover({ items }: { items: DiscoverItem[] }) {
   }, [items, sort, category, q]);
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+    <div>
+      <div className="tabs" role="tablist">
         {SORTS.map(([s, label]) => (
-          <button key={s} className={`nav-item ${sort === s ? "active" : ""}`} style={{ width: "auto" }} onClick={() => setSort(s)}>
+          <button key={s} role="tab" aria-selected={sort === s} className={sort === s ? "active" : ""} onClick={() => setSort(s)}>
             {label}
           </button>
         ))}
-        <input placeholder="Search simulations…" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 240, marginLeft: "auto" }} />
       </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {["all", ...categories].map((c) => (
-          <button key={c} className={`pill ${category === c ? "active" : ""}`} style={{ cursor: "pointer", borderColor: category === c ? "var(--accent)" : undefined }} onClick={() => setCategory(c)}>
-            {c === "all" ? "All categories" : KNOWN_ROLES[c] ?? c}
-          </button>
+      <div className="filters">
+        <input placeholder="Filter problems…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Filter problems" />
+        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Team">
+          <option value="all">All teams</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>{KNOWN_ROLES[c] ?? c}</option>
+          ))}
+        </select>
+        <span className="muted" style={{ marginLeft: "auto", fontSize: 13 }}>{shown.length} problem{shown.length === 1 ? "" : "s"}</span>
+      </div>
+      <div className="issues">
+        <div className="issue-row head" aria-hidden>
+          <span>Key</span>
+          <span>Problem</span>
+          <span>Complexity</span>
+          <span>Estimate</span>
+          <span>Solved</span>
+        </div>
+        {shown.length === 0 && <p className="muted" style={{ padding: "12px 14px", margin: 0 }}>No problems match.</p>}
+        {shown.map((i) => (
+          <Link key={i.slug} href={`/problems/${i.slug}`} className="issue-row">
+            <span className="issue-key">{i.key}</span>
+            <span>
+              <div className="issue-title">{i.title}</div>
+              <div className="issue-meta">
+                <RoleLabel role={i.category} />
+                <span>{i.source === "official" ? "Official" : `by ${i.authorName || "anonymous"}`}</span>
+                {i.concepts.slice(0, 2).map((c) => (
+                  <span key={c} className="concept">· {c}</span>
+                ))}
+              </div>
+            </span>
+            <span className="issue-num"><Priority score={i.complexity.score} label={i.complexity.label} /></span>
+            <span className="issue-num">{i.expectedMinutes} min</span>
+            <span className="issue-num">
+              {i.solvers > 0 ? `${i.solvers} ${i.solvers === 1 ? "person" : "people"}` : <span className="muted">—</span>}
+              {i.ratingAvg !== null && <div className="muted" style={{ fontSize: 12 }}>★ {i.ratingAvg} · ♥ {i.likes}</div>}
+            </span>
+          </Link>
         ))}
       </div>
-      {shown.length === 0 && <p className="muted">Nothing here yet.</p>}
-      {shown.map((i) => (
-        <Link key={i.slug} href={`/problems/${i.slug}`} className="card" style={{ textDecoration: "none", color: "inherit", display: "grid", gap: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-            <strong style={{ fontSize: 16 }}>{i.title}</strong>
-            <ComplexityBadge score={i.complexity.score} label={i.complexity.label} />
-          </div>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {KNOWN_ROLES[i.category] ?? i.category} · ~{i.expectedMinutes} min · {i.source === "official" ? "Official" : `by ${i.authorName || "anonymous"}`}
-          </div>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {i.attempts} attempt{i.attempts === 1 ? "" : "s"}
-            {i.completionRate !== null && ` · ${i.completionRate}% finished`} · ♥ {i.likes}
-            {i.ratingAvg !== null && ` · ★ ${i.ratingAvg} (${i.ratingCount})`}
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {i.concepts.map((c) => <span key={c} className="pill">{c}</span>)}
-          </div>
-        </Link>
-      ))}
     </div>
+  );
+}
+
+const ROLE_COLORS: Record<string, [string, string]> = {
+  "data-analyst": ["#e3f2fd", "#0b5394"],
+  "data-scientist": ["#ede7f6", "#4527a0"],
+  "ux-designer": ["#fce4ec", "#ad1457"],
+  "product-manager": ["#fff3e0", "#b45309"],
+  "software-engineer": ["#e8f5e9", "#1b5e20"],
+  cybersecurity: ["#ffebee", "#b71c1c"],
+  marketing: ["#f3e5f5", "#6a1b9a"],
+  finance: ["#e0f2f1", "#00695c"],
+  operations: ["#eceff1", "#37474f"],
+  "customer-support": ["#fffde7", "#795548"],
+};
+
+/** A team label, like an issue tracker's. */
+export function RoleLabel({ role }: { role: string }) {
+  const [bg, fg] = ROLE_COLORS[role] ?? ["#eeeeee", "#444444"];
+  return <span className="label" style={{ background: bg, color: fg }}>{KNOWN_ROLES[role] ?? role}</span>;
+}
+
+/** Complexity as a priority-style signal: bars + label. */
+export function Priority({ score, label }: { score: number; label: string }) {
+  const level = score >= 5 ? 3 : score >= 3 ? 2 : 1;
+  const color = score >= 7 ? "var(--bad)" : score >= 5 ? "var(--warn)" : score >= 3 ? "var(--accent)" : "var(--good)";
+  return (
+    <span title={`Complexity ${score}/10`} style={{ color, fontWeight: 600, whiteSpace: "nowrap" }}>
+      <span className={`prio l${level}`} aria-hidden><i /><i /><i /></span>
+      {label} <span className="muted" style={{ fontWeight: 400 }}>{score.toFixed(1)}</span>
+    </span>
   );
 }
