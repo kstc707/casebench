@@ -7,6 +7,7 @@ const nextConfig = {
     "@casebench/simulation-engine",
     "@casebench/ai",
     "@casebench/database",
+    "@casebench/author-agent",
   ],
   // Monorepo: trace server files from the repo root, and ship the role-pack
   // content (read from disk at runtime, so the tracer can't see it) with

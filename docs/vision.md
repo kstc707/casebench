@@ -54,7 +54,8 @@ Every simulation, in any field, is the same shape (`packages/simulation-engine/s
 | 4. Community feedback: like, rate, comment, creator stats | ✅ Built (build log 09) |
 | 5. Complexity score: structural, then calibrated by solvers | ✅ v1 built (build log 09) |
 | "I'm stuck" hint ladder | ✅ Built (build log 09) |
-| AI-assisted creation ("describe it → draft simulation") | ⏳ Next. The creator side's biggest friction |
+| AI author agent: researches real problems online → drafts a simulation by CB → human review | ✅ Built (build log 12) |
+| AI-assisted creation for community creators ("describe it → draft") | ⏳ Next: reuse the author agent in the Studio |
 | Profiles: who created / solved what, profile pages | ✅ Built (build log 11): name + profile key, no email (demo) |
 | More environment types: logs, file trees, mock APIs, branching decisions | ⏳ Later |
 | Moderation, rate limits | ⏳ Before a public launch |
