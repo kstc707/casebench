@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { createScenario, getPool, listMyScenarios } from "../../../../lib/db";
+import { createScenario, getPool, listMyScenarios, socialSummaries, solverStats } from "../../../../lib/db";
 import { getUserId } from "../../../../lib/session";
 import { handleRouteError, jsonError, readJsonBody } from "../../../../lib/api";
 import { starterScenario } from "@casebench/simulation-engine";
@@ -13,7 +13,15 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const userId = await getUserId();
-    const scenarios = (await listMyScenarios(getPool(), userId)).map((s) => ({
+    const mine = await listMyScenarios(getPool(), userId);
+    const slugs = mine.map((s) => s.slug);
+    const [stats, social] = await Promise.all([solverStats(getPool(), slugs), socialSummaries(getPool(), slugs)]);
+    const scenarios = mine.map((s) => ({
+      attempts: stats.get(s.slug)?.attempts ?? 0,
+      completions: stats.get(s.slug)?.completions ?? 0,
+      avgScore: stats.get(s.slug)?.avgScore ?? null,
+      likes: social.get(s.slug)?.likes ?? 0,
+      ratingAvg: social.get(s.slug)?.ratingAvg ?? null,
       id: s.id,
       slug: s.slug,
       title: (s.bundle as { problem?: { title?: string } }).problem?.title ?? "Untitled",

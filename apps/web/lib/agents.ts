@@ -1,7 +1,7 @@
 import "server-only";
 import { IllegalTransitionError, type RunEvent } from "@casebench/domain";
 import { getAIProvider } from "@casebench/ai";
-import { dueTriggers, generateAgentMessage, replyInstruction, type ProblemContext } from "@casebench/agents";
+import { currentHintLevel, dueTriggers, generateAgentMessage, hintInstruction, replyInstruction, type ProblemContext } from "@casebench/agents";
 import type { ProblemBundle } from "@casebench/simulation-engine";
 import { appendRunEvent, getPool, getRun, isUniqueViolation } from "./db";
 import { getBundle } from "./problems";
@@ -106,6 +106,43 @@ export async function replyToUser(runId: string, userId: string, channel: string
     events: [...run.events, sent],
     now: Date.now(),
     instruction: replyInstruction(text),
+    mock: who.persona.offlineReply,
+  });
+  await appendRunEvent(pool, runId, userId, {
+    type: "message_received",
+    at: new Date().toISOString(),
+    channel,
+    text: reply.text,
+    trigger: null,
+    blocked: reply.blocked,
+  });
+}
+
+/**
+ * "I'm stuck": log the request (which raises this coworker's hint level by
+ * one, in code), then have them give exactly one hint at the new level.
+ */
+export async function requestHint(runId: string, userId: string, channel: string) {
+  const pool = getPool();
+  const run = await getRun(pool, runId, userId);
+  const bundle = await getBundle(run.problemSlug);
+  const who = bundle && agentFor(bundle, channel);
+  if (!bundle || !who) throw new UnknownChannelError(channel);
+
+  const asked: RunEvent = { type: "hint_requested", at: new Date().toISOString(), channel };
+  await appendRunEvent(pool, runId, userId, asked);
+  const events = [...run.events, asked];
+  const level = currentHintLevel(who.agent, events, Date.now());
+
+  const reply = await generateAgentMessage({
+    provider: getAIProvider(),
+    ...who,
+    problem: problemContext(bundle),
+    guards: bundle.agents.leakGuards,
+    events,
+    now: Date.now(),
+    instruction: hintInstruction(level),
+    // Never echo the hint *policy* offline: it's written for the agent and can contain the answer.
     mock: who.persona.offlineReply,
   });
   await appendRunEvent(pool, runId, userId, {

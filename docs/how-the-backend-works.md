@@ -70,6 +70,9 @@ when no key is set.
 | `POST /api/runs/:id/submit` | Freeze the write-up, grade it, manager reacts (retry-safe) |
 | `POST /api/runs/:id/publish` | Freeze the run, create the portfolio entry |
 | `GET /api/problems/:slug/data/:file` | Serve a CSV — only files listed in the case's `dataFiles` |
+| `GET /api/simulations/:slug` | Complexity, solver stats, likes/ratings, comments, and what you've done |
+| `POST /api/simulations/:slug/{like,rating,comments}` | Like/unlike; rate 1–5 (finishers only); comment / delete your comment |
+| `POST /api/runs/:id/hint` | "I'm stuck": raise that coworker's hint level by one and get one hint |
 | `/api/studio/scenarios/**` + `/studio` pages | Scenario Studio: create/import, edit (validated on save), list in Community, export, delete |
 | `/portfolio/:runId` (page) | Public record of a published run |
 | `lib/agents.ts` | The orchestrator (fire triggers, reply, post-evaluation reaction) |
@@ -82,10 +85,10 @@ when no key is set.
 | Package | Key files | Responsibility |
 |---|---|---|
 | `domain` | `run.ts`, `entities.ts` | Event types, the run state machine, content/agent types |
-| `database` | `src/runs.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
+| `database` | `src/runs.ts`, `src/scenarios.ts`, `src/social.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
 | `agents` | `triggers.ts`, `hints.ts`, `prompt.ts`, `respond.ts`, `guard.ts`, `evaluator.ts` | The agent engine and the grader |
 | `ai` | `anthropicProvider.ts`, `openaiCompatibleProvider.ts`, `mockProvider.ts`, `config.ts` | Model calls (Claude or Gemini/Groq/…); model choice; offline mode |
-| `simulation-engine` | `loadRolePack.ts`, `scenarioSchema.ts`, `starterScenario.ts` | Load cases; the one schema every scenario must pass; Studio template; strip secrets |
+| `simulation-engine` | `loadRolePack.ts`, `scenarioSchema.ts`, `starterScenario.ts`, `complexity.ts` | Load cases; the one schema every scenario must pass; Studio template; strip secrets |
 | `content-tools` | `streamwave.ts`, `analyzeStreamwave.ts`, `import-scenario.ts` | Seeded data generator + analyzer; promote Studio exports to official files |
 
 ### Content (`content/role-packs/data-analyst/companies/streamwave/`)

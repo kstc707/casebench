@@ -1,16 +1,18 @@
 # Casebench
 
-> Practice the job before you have the job: messy data, AI coworkers on Slack, and feedback graded
-> against what's actually true.
+> Create, share, and solve realistic simulations of real work.
 
-You're dropped into a realistic analyst assignment at a fictional streaming company. Your manager
-(an AI agent) DMs you the ask. You query six real-looking tables with SQL in your browser. Your
-coworkers **watch what you're doing** and message you on their own: the data engineer pings you
-when you open the sessions table, your manager checks in after a few queries and asks for a status
-update when the VP is waiting. Each coworker knows a different slice of the truth, so you have to
-ask the right person the right question. When you submit, a grader agent scores your write-up
-against facts measured from the very data you saw, and against the queries you actually ran.
-Publish it, and you get a shareable portfolio page.
+Anyone can build an interactive work situation (a broken dashboard, a confusing sign-up flow, a
+production incident, a failed campaign) and anyone else can step into it and try to solve it.
+You don't answer questions about the job. You're dropped into the situation: AI coworkers message
+you on Slack and **notice what you're doing**, each knows a different slice of the truth, there's
+data to query and documents to read, and you hand in a deliverable. A grader agent scores it against
+what was actually true and against what you actually did. Then you rate it, discuss it, and pick
+the next one, sorted by trending, new, top-rated, or a computed **complexity score**.
+
+Think LeetCode's repeatable practice, plus help when you're stuck, plus a community that creates and
+rates the problems, with the static question replaced by a small working environment.
+See **[the vision](docs/vision.md)** for the full product definition and what's built.
 
 ## What's in it
 
@@ -22,10 +24,14 @@ Publish it, and you get a shareable portfolio page.
 | **Grader agent** | Structured-output scoring against the hidden truth + measured facts + your query log |
 | **Run event log** | Every action appended to Postgres; published runs frozen by database triggers |
 | **Portfolio page** | Public record: write-up, grade, every query, the Slack conversation |
-| **Scenario Studio** | Anyone can create a simulation for any role (UX, PM, analyst…) in the app, play it, and share it |
+| **Simulation Studio** | Anyone can create a simulation for any field in the app, play it, share it, and see how solvers do |
+| **Community** | Discovery (trending / new / top rated / hardest), likes, ratings (finishers only), comments with "solved it" badges |
+| **Complexity score** | Five-dimension difficulty profile from the simulation's structure, recalibrated by real solver results |
+| **"I'm stuck"** | A hint ladder: each press makes a coworker give one stronger hint, and the grader sees how many you used |
 
 ## Start here
 
+- **[Vision](docs/vision.md)** — what Casebench is becoming, and an honest status per stage
 - **[How it works](docs/how-the-backend-works.md)** — layers, which file is which, request walkthroughs
 - **[Build log](docs/build-log/README.md)** — every step: what, why, problems hit, how verified, interview notes
 - **[Market research](docs/market-research.md)** — who else does this, and an honest assessment

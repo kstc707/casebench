@@ -75,6 +75,15 @@ describe("currentHintLevel", () => {
     expect(currentHintLevel(agent, [start], now(41))).toBe(2);
   });
 
+  it("raises the level by one per 'I'm stuck' request, capped at the max", () => {
+    const stuck = (min: number): RunEvent => ({ type: "hint_requested", at: at(min), channel: "priya" });
+    expect(currentHintLevel(agent, [start, stuck(1)], now(2))).toBe(1);
+    expect(currentHintLevel(agent, [start, stuck(1), stuck(2)], now(3))).toBe(2);
+    expect(currentHintLevel(agent, [start, stuck(1), stuck(2), stuck(3)], now(4))).toBe(2);
+    // Requests to someone else don't count for Priya.
+    expect(currentHintLevel(agent, [start, { type: "hint_requested", at: at(1), channel: "sam" }], now(2))).toBe(0);
+  });
+
   it("only counts questions asked to this agent", () => {
     const events = [start, sent(1, "sam", "a"), sent(2, "sam", "b"), sent(3, "sam", "c")];
     expect(currentHintLevel(agent, events, now(4))).toBe(0);

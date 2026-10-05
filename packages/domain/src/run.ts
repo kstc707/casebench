@@ -35,6 +35,8 @@ export type RunEvent =
       trigger: string | null;
       blocked?: boolean;
     }
+  /** The user pressed "I'm stuck": the coworker on `channel` gives one stronger hint. */
+  | { type: "hint_requested"; at: string; channel: string }
   | { type: "submission_drafted"; at: string; draft: unknown }
   | { type: "submission_finalized"; at: string; submission: unknown }
   | { type: "evaluation_returned"; at: string; score: number; feedback: unknown }
@@ -77,6 +79,7 @@ export function statusForEvent(event: RunEvent): RunStatus | "keep" | null {
       return "started";
     case "message_sent":
     case "message_received":
+    case "hint_requested":
       return "keep";
     case "brief_viewed":
     case "resource_opened":

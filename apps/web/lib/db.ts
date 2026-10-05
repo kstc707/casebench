@@ -16,4 +16,13 @@ export {
   listMyScenarios,
   listListedScenarios,
   ScenarioNotFoundError,
+  solverStats,
+  socialSummaries,
+  setLike,
+  setRating,
+  NotFinishedError,
+  addComment,
+  listComments,
+  deleteComment,
+  viewerState,
 } from "@casebench/database";

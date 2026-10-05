@@ -47,3 +47,9 @@ export async function generateAgentMessage(input: AgentTurnInput): Promise<{ tex
 export function replyInstruction(userText: string): string {
   return `They just sent you this message: """${userText}""" Reply to it.`;
 }
+
+export function hintInstruction(level: number): string {
+  return level === 0
+    ? `They pressed "I'm stuck", but no hints are unlocked yet. Ask what they've tried so far and encourage them to keep going; don't hint.`
+    : `They pressed "I'm stuck" and asked for a hint. Give exactly ONE hint at level ${level} of your hint policy (the strongest you're allowed right now), in one or two sentences, based on what the activity log shows they've already done. Don't repeat a hint you already gave.`;
+}
