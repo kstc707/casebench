@@ -27,3 +27,4 @@ if you want the big picture first.
 | 08 | [Scenario Studio: anyone can create simulations, any role](08-scenario-studio.md) | `claude/backbone-runs-api` |
 | 09 | [Community layer: complexity, likes, ratings, comments, "I'm stuck"](09-community-layer.md) | `claude/community-layer` |
 | 10 | [First live deploy, and the retired-model bug it caught](10-first-deploy.md) | `claude/gemini-3-5-models` |
+| 11 | [Profiles: who created it, who solved it, how many](11-profiles.md) | `claude/accounts` |

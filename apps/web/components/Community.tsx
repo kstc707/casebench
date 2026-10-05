@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { requireProfile } from "./Profile";
 
 interface Complexity {
   score: number;
@@ -12,10 +14,20 @@ interface Complexity {
 }
 interface CommunityData {
   complexity: Complexity;
-  stats: { attempts: number; completions: number; avgScore: number | null; avgMinutes: number | null };
+  stats: { attempts: number; completions: number; solvers: number; avgScore: number | null; avgMinutes: number | null };
   social: { likes: number; ratingAvg: number | null; ratingCount: number };
-  viewer: { liked: boolean; myRating: number | null; finished: boolean };
-  comments: Array<{ id: string; authorName: string; body: string; createdAt: string; mine: boolean; authorFinished: boolean }>;
+  viewer: { liked: boolean; myRating: number | null; finished: boolean; profile: { handle: string; displayName: string } | null };
+  author: { handle: string; displayName: string } | null;
+  solvers: Array<{ handle: string; displayName: string; solvedAt: string }>;
+  comments: Array<{
+    id: string;
+    authorName: string;
+    authorHandle: string | null;
+    body: string;
+    createdAt: string;
+    mine: boolean;
+    authorFinished: boolean;
+  }>;
 }
 
 const DIMENSIONS: Array<[keyof Complexity["dimensions"], string]> = [
@@ -41,7 +53,6 @@ export function ComplexityBadge({ score, label }: { score: number; label: string
  */
 export function Community({ slug, showRatePrompt }: { slug: string; showRatePrompt?: boolean }) {
   const [data, setData] = useState<CommunityData | null>(null);
-  const [name, setName] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -52,15 +63,15 @@ export function Community({ slug, showRatePrompt }: { slug: string; showRateProm
 
   useEffect(() => {
     void load();
-    try {
-      setName(localStorage.getItem("cb_display_name") ?? "");
-    } catch {
-      // storage unavailable — fine
-    }
+    // Creating a profile or signing in elsewhere on the page changes what we show.
+    window.addEventListener("cb:profile-changed", load);
+    return () => window.removeEventListener("cb:profile-changed", load);
   }, [load]);
 
   async function post(path: string, payload: unknown, method = "POST") {
     setError(null);
+    // Likes, ratings and comments are recorded under a name.
+    if (method === "POST" && !(await requireProfile("Likes, ratings and comments are shown under your name."))) return false;
     const res = await fetch(`/api/simulations/${slug}${path}`, {
       method,
       headers: { "Content-Type": "application/json" },
@@ -72,12 +83,7 @@ export function Community({ slug, showRatePrompt }: { slug: string; showRateProm
   }
 
   async function comment() {
-    try {
-      localStorage.setItem("cb_display_name", name);
-    } catch {
-      // ignore
-    }
-    if (await post("/comments", { name, body })) setBody("");
+    if (await post("/comments", { body })) setBody("");
   }
 
   if (!data) return <div className="card muted">Loading community…</div>;
@@ -111,12 +117,29 @@ export function Community({ slug, showRatePrompt }: { slug: string; showRateProm
           ))}
         </div>
         <div className="muted" style={{ fontSize: 13 }}>
+          {data.author ? (
+            <>
+              Created by <Link href={`/u/${data.author.handle}`}>{data.author.displayName}</Link> ·{" "}
+            </>
+          ) : null}
           {stats.attempts} attempt{stats.attempts === 1 ? "" : "s"}
           {completion !== null && ` · ${completion}% finished`}
           {stats.avgScore !== null && ` · average score ${stats.avgScore}/100`}
           {stats.avgMinutes !== null && stats.avgMinutes >= 3 && ` · average ${stats.avgMinutes} min`}
         </div>
       </div>
+
+      {data.solvers.length > 0 && (
+        <div className="card" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <strong>Solved by {stats.solvers} {stats.solvers === 1 ? "person" : "people"}</strong>
+          <span className="muted" style={{ fontSize: 13 }}>recently:</span>
+          {data.solvers.map((s) => (
+            <Link key={s.handle} className="pill solver" href={`/u/${s.handle}`} title={`Solved ${new Date(s.solvedAt).toLocaleDateString()}`}>
+              ✓ {s.displayName}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {(showRatePrompt || viewer.finished) && (
         <div className="card" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -137,14 +160,14 @@ export function Community({ slug, showRatePrompt }: { slug: string; showRateProm
       <div className="card" style={{ display: "grid", gap: 10 }}>
         <strong>Discussion ({data.comments.length})</strong>
         <div style={{ display: "grid", gap: 6 }}>
-          <input placeholder="Display name" value={name} onChange={(e) => setName(e.target.value)} style={{ maxWidth: 240 }} />
+          {viewer.profile && <span className="muted" style={{ fontSize: 13 }}>Commenting as {viewer.profile.displayName}</span>}
           <textarea
             rows={2}
             placeholder={viewer.finished ? "How did you approach it? (avoid spoiling the answer)" : "Questions or thoughts? (no spoilers please)"}
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
-          <button className="primary" style={{ justifySelf: "start" }} disabled={!name.trim() || !body.trim()} onClick={comment}>
+          <button className="primary" style={{ justifySelf: "start" }} disabled={!body.trim()} onClick={comment}>
             Post comment
           </button>
         </div>
@@ -152,7 +175,11 @@ export function Community({ slug, showRatePrompt }: { slug: string; showRateProm
         {data.comments.map((cm) => (
           <div key={cm.id} style={{ borderTop: "1px solid var(--border)", paddingTop: 8 }}>
             <div style={{ fontSize: 13 }}>
-              <strong>{cm.authorName}</strong>
+              {cm.authorHandle ? (
+                <Link href={`/u/${cm.authorHandle}`}><strong>{cm.authorName}</strong></Link>
+              ) : (
+                <strong>{cm.authorName}</strong>
+              )}
               {cm.authorFinished && <span className="pill" style={{ marginLeft: 6, fontSize: 11 }}>✓ solved it</span>}
               <span className="muted"> · {new Date(cm.createdAt).toLocaleDateString()}</span>
               {cm.mine && (

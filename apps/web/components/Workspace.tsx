@@ -13,6 +13,7 @@ import { WriteUp } from "./WriteUp";
 import { Community } from "./Community";
 import { DEFAULT_DELIVERABLE, KNOWN_ROLES } from "@casebench/domain";
 import type { ClientSafeCaseStudy, PublicPersona, RunDetail, ScoredEvaluation, Submission } from "./types";
+import { requireProfile } from "./Profile";
 
 type App = "sql" | "writeup" | "feedback";
 type View = { kind: "channel" } | { kind: "dm"; id: string } | { kind: "app"; app: App };
@@ -51,6 +52,8 @@ export function Workspace({
 
   async function start() {
     setError(null);
+    // Attempts and scores are recorded under a name, so ask for one first.
+    if (!(await requireProfile("Your attempt and score will be recorded under this name."))) return;
     try {
       setRun(await startRun(problem.slug));
     } catch (e) {
