@@ -40,7 +40,14 @@ this because they use the offline mock. That's exactly why a live smoke test mat
 |---|---|
 | Gemini defaults → `gemini-3.5-flash-lite` (coworkers) and `gemini-3.5-flash` (grading) | `packages/ai/src/config.ts` |
 | If the AI provider errors (retired model, free-tier limit, outage), the coworker posts a visible "couldn't reach the AI service" notice and the error is logged, instead of the request failing with a 500 | `packages/agents/src/respond.ts` (+ test) |
+| **Retry temporary errors:** 429 (rate limit) and 5xx ("high demand") get two retries, after 1 s and then 3 s; errors that waiting won't fix (bad key, retired model) fail at once | `packages/ai/src/openaiCompatibleProvider.ts` (+ test) |
 | Deploy guide: free-tier limits per model; troubleshooting rows for retired models and limits | `docs/deploy.md` |
+
+**Second issue, found on the preview deploy of the fix:** the coworkers now answered with real
+Gemini replies (Priya, a real "I'm stuck" hint, and Sam's AI-written message), but grading failed once
+with `503: This model is currently experiencing high demand`. The run was safely left "submitted", and
+the UI already offers "press Submit again to retry grading", but free tiers do this often, so the
+adapter now retries briefly before giving up.
 
 **Why not fall back to the offline scripted reply?** That would hide a broken setup behind a reply that
 looks real. A visible notice plus a log line is honest and easy to debug.

@@ -16,18 +16,30 @@ export class OpenAICompatibleProvider implements AIProvider {
   constructor(
     private baseUrl: string,
     private apiKey: string,
-    private fetchImpl: typeof fetch = fetch
+    private fetchImpl: typeof fetch = fetch,
+    /** Waits between retries; injectable so tests don't sleep. */
+    private sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))
   ) {}
 
   private async chat(body: Record<string, unknown>): Promise<string> {
-    const res = await this.fetchImpl(`${this.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
-      },
-      body: JSON.stringify(body),
-    });
+    // Free tiers often answer 429 (rate limit) or 503 ("high demand") for a
+    // few seconds. Retry those briefly; anything else (bad key, retired
+    // model) fails immediately because waiting won't fix it.
+    const delays = [1000, 3000];
+    let res: Response;
+    for (let attempt = 0; ; attempt++) {
+      res = await this.fetchImpl(`${this.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      const transient = res.status === 429 || res.status >= 500;
+      if (res.ok || !transient || attempt >= delays.length) break;
+      await this.sleep(delays[attempt]);
+    }
     if (!res.ok) {
       throw new Error(`LLM API error ${res.status}: ${(await res.text()).slice(0, 300)}`);
     }
