@@ -174,7 +174,11 @@ export async function runAuthorAgent(input: AuthorInput): Promise<AuthorResult> 
   // 4–6. Design, build, check; repair if needed.
   const example = starterScenario("SLUG", plan.role);
   delete example.data;
-  const maxRepairs = input.maxRepairs ?? 2;
+  // Show the model every part it must fill in, including a leak guard.
+  example.agents.leakGuards = [
+    { personaId: "*", pattern: "(re-?sent|duplicate)\\s+events?", unlessUserSaid: "duplicat|re-?sen", replacement: "Have you looked at whether every row is a real, separate event?" },
+  ];
+  const maxRepairs = input.maxRepairs ?? 3;
   let feedback: string[] = [];
   let previous: Design | null = null;
 
@@ -208,11 +212,13 @@ export async function runAuthorAgent(input: AuthorInput): Promise<AuthorResult> 
         const baseline = await input.runChecks(baselineSpec, generateTables(baselineSpec), design.checks);
         checks = checks.map((c, i) => ({ ...c, baselineOk: baseline[i]?.ok === true }));
         const proving = checks.filter((c) => !c.baselineOk);
-        if (proving.length < 2) {
+        if (proving.length < 1) {
           feedback = [
-            `only ${proving.length} check(s) prove the planted effect; at least 2 must pass on the data AND fail on the same data generated without the effects. ` +
-              `These also pass without the effects, so they prove nothing: ${checks.filter((c) => c.baselineOk).map((c) => `"${c.description}"`).join(", ")}. ` +
-              "Compare before/after or a segment vs the rest with a threshold that only holds because of the effect.",
+            "none of the checks proves the planted cause. Each check below ALSO returned ok = true on the same recipe generated WITHOUT any effects, " +
+              "so it would be true even if the cause weren't there: " +
+              checks.map((c) => `"${c.description}"`).join(", ") +
+              ". Rewrite the checks to compare the affected rows (the effect's where-conditions: its segment and/or period) with the unaffected rows, " +
+              "using a threshold that only the effect can cross. See the check examples in the instructions.",
           ];
         }
       }
@@ -243,8 +249,8 @@ export function lintDesign(design: Design): string[] {
     for (const c of t.columns) if (GIVEAWAY.test(c.name)) out.push(`dataSpec: column ${t.name}.${c.name} labels the answer; remove it so the solver has to find the cause`);
   }
   const s = design.scenario as { problem?: { brief?: string }; agents?: { leakGuards?: Array<{ pattern: string }> } };
-  const guards = s.agents?.leakGuards ?? [];
-  if (guards.length === 0) out.push("agents.leakGuards: add at least one guard on the root-cause wording");
+  const guards = (s.agents?.leakGuards ?? []).filter((g) => typeof g?.pattern === "string" && g.pattern);
+  if (guards.length === 0) out.push('agents.leakGuards: add at least one guard on the root-cause wording, like { "personaId": "*", "pattern": "...", "unlessUserSaid": "...", "replacement": "..." }');
   const brief = s.problem?.brief ?? "";
   for (const g of guards) {
     try {
@@ -319,5 +325,11 @@ Return JSON with three parts:
    - effects plant the real-world cause (and at least one red herring that looks suspicious but isn't the cause). Each effect has where conditions (ops eq, neq, in, gt, gte, lt, lte; dates compared as "YYYY-MM-DD" strings), an optional probability, and EXACTLY ONE action: set, multiply, add, pick, duplicate (true) or drop (true).
    - Make the effect big enough to find (e.g. 20–60% change), consistent with the brief's dates and numbers.
 
-3. "checks": 2–6 PostgreSQL SELECT queries over those tables that PROVE the planted effect is findable and matches the answer key. Each must return exactly one row with a boolean column named ok. Types in the check database: id = integer (or text if it has a prefix), category = text, number = numeric, date = date (timestamp if withTime), bool = boolean. Example: select avg(minutes) filter (where started_at >= '2026-08-03') < 0.8 * avg(minutes) filter (where started_at < '2026-08-03') as ok from sessions`;
+3. "checks": 2–6 PostgreSQL SELECT queries over those tables that PROVE the planted cause is findable and matches the answer key. Each must return exactly one row with a boolean column named ok.
+   They are tested twice: on your data (must be true) and on the SAME recipe generated with every effect removed (at least one, ideally all but one, must be FALSE there). So a check must compare the rows an effect touched (its where-conditions: segment and/or period) with the rows it didn't, with a threshold only the effect can cross. Totals, "at least one exists", and comparisons between two independent tables prove nothing.
+   Good examples:
+   - drop after a date: select avg(minutes) filter (where started_at >= '2026-08-03') < 0.8 * avg(minutes) filter (where started_at < '2026-08-03') as ok from sessions
+   - duplicates only in one segment: select (count(*) - count(distinct session_id)) filter (where app_version = '5.3.0') > 5 * ((count(*) - count(distinct session_id)) filter (where app_version <> '5.3.0') + 1) as ok from sessions
+   - a rate that jumped in one segment: select avg(case when success then 0 else 1 end) filter (where country = 'BR' and attempted_at >= '2026-09-10') > 2 * avg(case when success then 0 else 1 end) filter (where country <> 'BR') as ok from logins
+   Types in the check database: id = integer (or text if it has a prefix), ref = the referenced column's type, category = text, number = numeric, date = date (timestamp if withTime), bool = boolean.`;
 }

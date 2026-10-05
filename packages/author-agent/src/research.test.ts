@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { htmlToText, isFetchableUrl, relevance, research } from "./research";
+import { htmlToText, isFetchableUrl, onTopic, relevance, research } from "./research";
 
 const long = (s: string) => `${s} `.repeat(80);
 
@@ -23,7 +23,7 @@ function fakeFetch(log: string[]) {
         headers: { "content-type": "text/html" },
       });
     }
-    if (url.includes("list=search")) return json({ query: { search: [{ title: "Data quality" }, { title: "List of Latin phrases" }] } });
+    if (url.includes("list=search")) return json({ query: { search: [{ title: "Duplicate metrics events" }, { title: "List of Latin phrases" }] } });
     if (url.includes("prop=extracts") && url.includes("Latin")) return json({ query: { pages: { "1": { extract: long("Carpe diem, et cetera.") } } } });
     if (url.includes("prop=extracts")) return json({ query: { pages: { "1": { extract: long("Duplicate events distort metrics…") } } } });
     return new Response("not found", { status: 404 });
@@ -57,5 +57,11 @@ describe("research", () => {
   it("scores relevance by the query's meaningful words", () => {
     expect(relevance("duplicate analytics events", "We fixed duplicated events", "our analytics pipeline")).toBe(3);
     expect(relevance("duplicate analytics events", "List of Latin phrases", "carpe diem")).toBe(0);
+  });
+
+  it("isn't fooled by common words or a page that only mentions the topic in passing", () => {
+    expect(onTopic("pixel firing multiple times", "UFOs invading airspace multiple times a month", "pixel")).toBe(false);
+    expect(onTopic("conversion double counting", "Ask HN: which movies did you watch?", "conversion counting double")).toBe(false);
+    expect(onTopic("conversion double counting", "We were double counting conversions", "our tracking pixel")).toBe(true);
   });
 });

@@ -127,7 +127,9 @@ async function searchTavily(f: Fetch, query: string, key: string): Promise<Sourc
 }
 
 const STOP = new Set(
-  "the and for with from that this what when why how into after before about over under your our their does did was were are have has not but can its it's case study postmortem post mortem fix fixed".split(" ")
+  ("the and for with from that this what when why how into after before about over under your our their does did was were are have has not " +
+    "but can its it's case study postmortem post mortem fix fixed multiple times time using used make made new more most many much than then " +
+    "them they there these those just like also only very really still even ever every each other some such into onto upon via data issue issues problem problems").split(" ")
 );
 
 /** Distinct meaningful words of the query that appear in the source: a cheap on-topic test. */
@@ -137,10 +139,13 @@ export function relevance(query: string, title: string, text: string): number {
   return words.filter((w) => hay.includes(w.length > 6 ? w.slice(0, w.length - 2) : w)).length;
 }
 
-/** On topic: at least two of the query's words (or the only one, for a one-word query). */
-function onTopic(query: string, title: string, text: string): boolean {
+/**
+ * On topic: the title names at least one of the query's meaningful words, and
+ * the page mentions at least two of them (or the only one, for a one-word query).
+ */
+export function onTopic(query: string, title: string, text: string): boolean {
   const meaningful = query.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)).length;
-  return relevance(query, title, text) >= Math.min(2, Math.max(1, meaningful));
+  return relevance(query, title, "") >= 1 && relevance(query, title, text) >= Math.min(2, Math.max(1, meaningful));
 }
 
 /**

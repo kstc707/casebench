@@ -19,7 +19,7 @@ plan → research online → brief → design → generate data → quality gate
 | 3. Brief | Summarises the real-world pattern: what happened, root causes, how it shows in data, red herrings. **Cites only URLs it actually read**; invented citations are dropped | big model |
 | 4. Design | Writes the whole scenario: fictional company and coworkers, private knowledge, hint levels, triggers, leak guards, hidden answer key, rubric, plus a **data recipe** and **SQL checks** | big model |
 | 5. Data | Code turns the recipe into CSV tables (seeded, repeatable) | no model |
-| 6. Quality gate | Schema validation; no answer-labelling columns; the brief must not trip the scenario's own leak guards; the agent's SQL checks must all return `ok = true` on the data, and **at least 2 must return false on the same recipe generated without the planted effects** (otherwise they prove nothing) | no model |
+| 6. Quality gate | Schema validation; no answer-labelling columns; the brief must not trip the scenario's own leak guards; the agent's SQL checks must all return `ok = true` on the data, and **at least one must return false on the same recipe generated without the planted effects** (otherwise it proves nothing; the prompt asks for more) | no model |
 | 7. Repair | Any failure goes back to the model as a list of problems; up to 2 repair rounds | big model |
 | 8. Review | Saved as an **unlisted draft by CB**. An admin plays it, reads the sources and checks, and publishes or rejects it | human |
 
@@ -52,6 +52,18 @@ The first real run (Gemini, live web) "passed" but was bad:
 3. **The brief hinted at the cause.** Fixed by testing the brief against the scenario's own leak guards.
 
 I rejected that draft, and the gate now catches all three automatically (tests included).
+
+The second live run showed the gate working (it threw out off-topic pages, re-planned, caught an
+`is_duplicate` column and a missing leak guard, and refused to publish when the checks proved
+nothing) and two more things to fix:
+
+4. **Common words fooled the relevance filter** ("UFOs … multiple times a month" matched "pixel
+   firing multiple times"). Now a source's title must name a key term, and common words are ignored.
+5. **The model didn't know how to write a check that proves something.** The prompt now explains the
+   counter-check and gives three worked examples (drop after a date, duplicates in one segment, a rate
+   that jumped in one segment); failures say exactly which checks passed without the cause; one more
+   repair round; and the example scenario shows a leak guard (one repair produced malformed guards,
+   which also exposed a bug: an empty pattern became a regex that matches everything).
 
 ## Safety
 

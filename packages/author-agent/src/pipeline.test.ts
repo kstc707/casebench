@@ -108,7 +108,7 @@ describe("author agent pipeline", () => {
     giveaway.dataSpec.tables[0].columns.push({ name: "is_fraud", kind: "bool", p: 0.1 });
     await expect(
       runAuthorAgent({ provider: fakeProvider([giveaway, design()], seen), slug: "s-x", runChecks: trivial, maxRepairs: 1, research: oneSource })
-    ).rejects.toMatchObject({ details: [expect.stringContaining("prove nothing")] });
+    ).rejects.toMatchObject({ details: [expect.stringContaining("none of the checks proves")] });
     expect(seen[3]).toContain("labels the answer"); // the give-away column was sent back first
   });
 
