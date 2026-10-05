@@ -44,7 +44,7 @@ describe.skipIf(!url)("community (Postgres)", () => {
     await finish(randomUUID(), 60);
     await insertRun(pool, slug, randomUUID()); // started, never finished
     const s = (await solverStats(pool, [slug])).get(slug)!;
-    expect(s).toMatchObject({ attempts: 3, completions: 2, avgScore: 70, attemptsLast7Days: 3 });
+    expect(s).toMatchObject({ attempts: 3, completions: 2, solvers: 2, avgScore: 70, attemptsLast7Days: 3 });
   });
 
   it("likes are one per person and can be undone", async () => {

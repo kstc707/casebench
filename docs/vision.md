@@ -55,7 +55,7 @@ Every simulation, in any field, is the same shape (`packages/simulation-engine/s
 | 5. Complexity score: structural, then calibrated by solvers | ✅ v1 built (build log 09) |
 | "I'm stuck" hint ladder | ✅ Built (build log 09) |
 | AI-assisted creation ("describe it → draft simulation") | ⏳ Next. The creator side's biggest friction |
-| Accounts (instead of per-browser identity) | ⏳ Needed before a wide launch |
+| Profiles: who created / solved what, profile pages | ✅ Built (build log 11): name + profile key, no email (demo) |
 | More environment types: logs, file trees, mock APIs, branching decisions | ⏳ Later |
 | Moderation, rate limits | ⏳ Before a public launch |
 

@@ -70,13 +70,15 @@ when no key is set.
 | `POST /api/runs/:id/submit` | Freeze the write-up, grade it, manager reacts (retry-safe) |
 | `POST /api/runs/:id/publish` | Freeze the run, create the portfolio entry |
 | `GET /api/problems/:slug/data/:file` | Serve a CSV — only files listed in the case's `dataFiles` |
-| `GET /api/simulations/:slug` | Complexity, solver stats, likes/ratings, comments, and what you've done |
-| `POST /api/simulations/:slug/{like,rating,comments}` | Like/unlike; rate 1–5 (finishers only); comment / delete your comment |
+| `GET /api/simulations/:slug` | Complexity, solver stats, creator, recent solvers, likes/ratings, comments, and what you've done |
+| `POST /api/simulations/:slug/{like,rating,comments}` | Like/unlike; rate 1–5 (finishers only); comment / delete your comment. Need a profile (401 otherwise) |
+| `GET/POST/PATCH /api/profile` | Who you are / create a profile from a name (returns the one-time profile key) / rename |
+| `POST /api/profile/signin`, `/signout` | Sign in on another device with @handle + profile key / sign out here |
 | `POST /api/runs/:id/hint` | "I'm stuck": raise that coworker's hint level by one and get one hint |
 | `/api/studio/scenarios/**` + `/studio` pages | Scenario Studio: create/import, edit (validated on save), list in Community, export, delete |
 | `/portfolio/:runId` (page) | Public record of a published run |
 | `lib/agents.ts` | The orchestrator (fire triggers, reply, post-evaluation reaction) |
-| `lib/session.ts` | Anonymous identity cookie |
+| `lib/session.ts` | Who is asking: signed profile session or anonymous guest cookie; create profile, sign in/out, `requireProfile()` |
 | `lib/runEvents.ts` | Validates what a browser may log (allow-list) |
 | `lib/problems.ts` | The only door to content — official files *and* Studio scenarios (slug `s-…`); client-safe views + server-only bundles |
 

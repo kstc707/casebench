@@ -16,7 +16,8 @@
 ## Next (in priority order)
 
 - [ ] **AI-assisted creation**: "describe the simulation you want" → a validated draft in the Studio (biggest creator-side friction)
-- [ ] Accounts (replace per-browser identity) so creators and solvers keep their history across devices
+- [x] Profiles (name + profile key): who created and solved what, profile pages, history across devices (build log 11)
+- [ ] Real login (Google/GitHub) if the demo turns into a product
 - [ ] 5–10 very different simulations (incident debugging, security investigation, product decision, operations)
 - [ ] New environment types: log viewers, file trees, mock APIs, branching decisions
 
@@ -26,7 +27,7 @@
 - [ ] Usage analytics view: how real users approach the case (did they dedupe? ask Sam?)
 - [ ] Moderation for Community listings (report / owner approval) and rate limits on scenario creation
 - [ ] Port the coding track (editor + deterministic test runner) from the prototype
-- [ ] Accounts + multi-run portfolios (replace the anonymous cookie)
+- [ ] Multi-run portfolios on profile pages
 - [ ] Server-sent events instead of polling, if concurrency grows
 
 ## Open questions

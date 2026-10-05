@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { IllegalTransitionError } from "@casebench/domain";
 import { RunNotFoundError } from "@casebench/database";
 import { AIRefusalError } from "@casebench/ai";
+import { ProfileRequiredError } from "./session";
 
 export function jsonError(status: number, error: string) {
   return NextResponse.json({ error }, { status });
@@ -12,6 +13,7 @@ export function jsonError(status: number, error: string) {
 export function handleRouteError(err: unknown) {
   if (err instanceof RunNotFoundError) return jsonError(404, "Run not found");
   if (err instanceof IllegalTransitionError) return jsonError(409, err.message);
+  if (err instanceof ProfileRequiredError) return jsonError(401, err.message);
   if (err instanceof AIRefusalError) return jsonError(502, "The AI declined to respond. Try rephrasing.");
   console.error(err);
   return jsonError(500, "Internal server error");

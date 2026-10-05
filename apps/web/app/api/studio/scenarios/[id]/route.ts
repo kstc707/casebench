@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteScenario, getPool, getScenarioForAuthor, ScenarioNotFoundError, updateScenario } from "../../../../../lib/db";
-import { getUserId } from "../../../../../lib/session";
+import { getUserId, getProfile } from "../../../../../lib/session";
 import { handleRouteError, jsonError, readJsonBody, runIdFrom } from "../../../../../lib/api";
 import { validateForSlug } from "../../../../../lib/studio";
 
@@ -24,7 +24,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 /**
- * PUT { bundle, authorName } — save. Rejected with readable errors (422) if
+ * PUT { bundle } — save. Rejected with readable errors (422) if
  * the scenario isn't valid, so a saved scenario is always playable.
  */
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -33,10 +33,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!id) return jsonError(404, "Scenario not found");
     const userId = await getUserId();
     const current = await getScenarioForAuthor(getPool(), id, userId);
-    const body = (await readJsonBody(req)) as { bundle?: unknown; authorName?: unknown } | undefined;
+    const body = (await readJsonBody(req)) as { bundle?: unknown } | undefined;
     const v = validateForSlug(body?.bundle, current.slug);
     if (!v.ok) return NextResponse.json({ error: "Fix these before saving", errors: v.errors }, { status: 422 });
-    const authorName = typeof body?.authorName === "string" ? body.authorName.trim().slice(0, 60) : undefined;
+    // Shown as "by <name>": always the profile's current name.
+    const authorName = (await getProfile())?.displayName;
     const saved = await updateScenario(getPool(), { id, authorId: userId, bundle: v.bundle, authorName });
     return NextResponse.json({ scenario: saved });
   } catch (err) {

@@ -41,6 +41,7 @@ const emptyStats = (slug: string): SolverStatsRow => ({
   slug,
   attempts: 0,
   completions: 0,
+  solvers: 0,
   avgScore: null,
   avgMinutes: null,
   attemptsLast7Days: 0,

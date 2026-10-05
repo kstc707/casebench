@@ -9,6 +9,8 @@ export interface SolverStatsRow {
   slug: string;
   attempts: number;
   completions: number;
+  /** Distinct people who finished (one person finishing twice counts once). */
+  solvers: number;
   avgScore: number | null;
   avgMinutes: number | null;
   attemptsLast7Days: number;
@@ -28,6 +30,7 @@ export async function solverStats(pool: pg.Pool, slugs: string[]): Promise<Map<s
     `select r.problem_slug as slug,
             count(*)::int as attempts,
             count(*) filter (where r.status in ${COMPLETED})::int as completions,
+            count(distinct r.user_id) filter (where r.status in ${COMPLETED})::int as solvers,
             count(*) filter (where r.created_at > now() - interval '7 days')::int as attempts_7d,
             avg((ev.payload ->> 'score')::numeric) as avg_score,
             avg(extract(epoch from (sub.created_at - r.created_at)) / 60.0) as avg_minutes
@@ -44,6 +47,7 @@ export async function solverStats(pool: pg.Pool, slugs: string[]): Promise<Map<s
       slug: r.slug,
       attempts: r.attempts,
       completions: r.completions,
+      solvers: r.solvers,
       attemptsLast7Days: r.attempts_7d,
       avgScore: r.avg_score === null ? null : Math.round(Number(r.avg_score)),
       avgMinutes: r.avg_minutes === null ? null : Math.round(Number(r.avg_minutes)),
@@ -114,6 +118,8 @@ export interface Comment {
   mine: boolean;
   /** Whether the author finished the simulation — shown as a "solved it" badge. */
   authorFinished: boolean;
+  /** The author's profile handle, when they have an account. */
+  authorHandle: string | null;
 }
 
 export async function addComment(pool: pg.Pool, slug: string, userId: string, authorName: string, body: string) {
@@ -125,10 +131,11 @@ export async function addComment(pool: pg.Pool, slug: string, userId: string, au
 
 export async function listComments(pool: pg.Pool, slug: string, viewerId: string | null, limit = 50): Promise<Comment[]> {
   const { rows } = await pool.query(
-    `select c.id, c.author_name, c.body, c.created_at, c.user_id = $2 as mine,
+    `select c.id, coalesce(u.display_name, c.author_name) as author_name, u.handle, c.body, c.created_at, c.user_id = $2 as mine,
             exists (select 1 from runs r where r.problem_slug = c.slug and r.user_id = c.user_id
                     and r.status in ${COMPLETED}) as finished
        from simulation_comments c
+       left join users u on u.id = c.user_id
       where c.slug = $1
       order by c.created_at desc
       limit $3`,
@@ -141,6 +148,7 @@ export async function listComments(pool: pg.Pool, slug: string, viewerId: string
     createdAt: r.created_at.toISOString(),
     mine: !!r.mine,
     authorFinished: r.finished,
+    authorHandle: r.handle ?? null,
   }));
 }
 

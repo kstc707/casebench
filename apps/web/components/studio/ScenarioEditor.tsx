@@ -5,6 +5,7 @@ import Link from "next/link";
 import { KNOWN_ROLES, type AgentTrigger, type TriggerCondition } from "@casebench/domain";
 import type { ScenarioBundle } from "@casebench/simulation-engine";
 import { selectStyle } from "./StudioHome";
+import { useProfile } from "../Profile";
 
 type Tab = "basics" | "coworkers" | "messages" | "grading" | "data" | "json";
 
@@ -174,13 +175,14 @@ const unique = (base: string, taken: string[]) => {
   return id;
 };
 
-function Basics({ b, edit, authorName, setAuthorName }: EditProps & { authorName: string; setAuthorName: (v: string) => void }) {
+function Basics({ b, edit, authorName }: EditProps & { authorName: string; setAuthorName: (v: string) => void }) {
+  const me = useProfile();
   const p = b.problem;
   const sections = p.deliverable ?? [];
   return (
     <>
-      <Field label="Your name" hint="Shown as the author in the Community section.">
-        <input value={authorName} onChange={(e) => setAuthorName(e.target.value)} />
+      <Field label="Author" hint="Your profile name, shown on the simulation. Saved with your next save.">
+        <input value={me?.displayName ?? authorName} readOnly />
       </Field>
       <Field label="Title">
         <input value={p.title} onChange={(e) => edit((d) => void (d.problem.title = e.target.value))} />

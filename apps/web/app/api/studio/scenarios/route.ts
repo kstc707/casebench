@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createScenario, getPool, listMyScenarios, socialSummaries, solverStats } from "../../../../lib/db";
-import { getUserId } from "../../../../lib/session";
+import { getUserId, requireProfile } from "../../../../lib/session";
 import { handleRouteError, jsonError, readJsonBody } from "../../../../lib/api";
 import { starterScenario } from "@casebench/simulation-engine";
 import { validateForSlug } from "../../../../lib/studio";
@@ -42,7 +42,7 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    const body = (await readJsonBody(req)) as { role?: unknown; title?: unknown; import?: unknown; authorName?: unknown } | undefined;
+    const body = (await readJsonBody(req)) as { role?: unknown; title?: unknown; import?: unknown; } | undefined;
     const id = randomUUID();
     const slug = `${STUDIO_SLUG_PREFIX}${id.slice(0, 8)}`;
 
@@ -55,9 +55,8 @@ export async function POST(req: Request) {
       const role = typeof body?.role === "string" && /^[a-z0-9-]{2,40}$/.test(body.role) ? body.role : "data-analyst";
       bundle = starterScenario(slug, role, typeof body?.title === "string" ? body.title.slice(0, 120) : undefined);
     }
-    const authorName = typeof body?.authorName === "string" ? body.authorName.trim().slice(0, 60) || null : null;
-    const userId = await getUserId();
-    const created = await createScenario(getPool(), { id, slug, authorId: userId, authorName, bundle });
+    const profile = await requireProfile();
+    const created = await createScenario(getPool(), { id, slug, authorId: profile.id, authorName: profile.displayName, bundle });
     return NextResponse.json({ id: created.id, slug: created.slug }, { status: 201 });
   } catch (err) {
     return handleRouteError(err);

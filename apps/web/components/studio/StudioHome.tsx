@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { KNOWN_ROLES } from "@casebench/domain";
+import { ProfileChip, requireProfile } from "../Profile";
 
 interface Mine {
   attempts: number;
@@ -37,6 +38,7 @@ export function StudioHome() {
   async function create(body: unknown) {
     setError(null);
     setErrors([]);
+    if (!(await requireProfile("Simulations you create are published under this name."))) return;
     const res = await fetch("/api/studio/scenarios", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -64,7 +66,10 @@ export function StudioHome() {
   return (
     <main className="page" style={{ display: "grid", gap: 20 }}>
       <div>
-        <Link href="/">← Casebench</Link>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+          <Link href="/">← Casebench</Link>
+          <ProfileChip />
+        </div>
         <h1 style={{ marginBottom: 4 }}>Simulation Studio</h1>
         <p className="muted" style={{ marginTop: 0 }}>
           Create a realistic simulation of any kind of work — data, design, engineering, security, marketing, operations —

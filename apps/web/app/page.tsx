@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCatalog } from "../lib/problems";
 import { metaFor } from "../lib/community";
 import { Discover, type DiscoverItem } from "../components/Discover";
+import { ProfileChip } from "../components/Profile";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +37,12 @@ export default async function HomePage() {
     <main className="page">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ margin: 0 }}>Casebench</h1>
-        <Link href="/studio" className="pill" style={{ padding: "6px 12px" }}>
-          ✎ Create a simulation
-        </Link>
+        <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+          <Link href="/studio" className="pill" style={{ padding: "6px 12px" }}>
+            ✎ Create a simulation
+          </Link>
+          <ProfileChip />
+        </span>
       </div>
       <p className="muted" style={{ maxWidth: 720 }}>
         Create, share, and solve realistic simulations of real work. Don't answer questions about the job — step into a

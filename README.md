@@ -26,6 +26,7 @@ See **[the vision](docs/vision.md)** for the full product definition and what's 
 | **Portfolio page** | Public record: write-up, grade, every query, the Slack conversation |
 | **Simulation Studio** | Anyone can create a simulation for any field in the app, play it, share it, and see how solvers do |
 | **Community** | Discovery (trending / new / top rated / hardest), likes, ratings (finishers only), comments with "solved it" badges |
+| **Profiles** | Pick a name (no email): "created by", "solved by N people", and a profile page per person listing what they solved and created |
 | **Complexity score** | Five-dimension difficulty profile from the simulation's structure, recalibrated by real solver results |
 | **"I'm stuck"** | A hint ladder: each press makes a coworker give one stronger hint, and the grader sees how many you used |
 

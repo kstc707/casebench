@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool, insertRun, listRuns } from "../../../lib/db";
 import { getProblemBySlug } from "../../../lib/problems";
-import { getUserId } from "../../../lib/session";
+import { getUserId, requireProfile } from "../../../lib/session";
 import { fireDueTriggers } from "../../../lib/agents";
 import { handleRouteError, jsonError, readJsonBody } from "../../../lib/api";
 
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   }
 }
 
-/** POST /api/runs { problemSlug } — start a new run. */
+/** POST /api/runs { problemSlug } — start a new run, recorded under your profile. */
 export async function POST(req: Request) {
   try {
     const body = (await readJsonBody(req)) as { problemSlug?: unknown } | undefined;
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const problem = await getProblemBySlug(body.problemSlug);
     if (!problem) return jsonError(404, "Problem not found");
 
-    const userId = await getUserId();
+    const userId = (await requireProfile()).id;
     const run = await insertRun(getPool(), problem.slug, userId);
     // The manager's kickoff message is waiting the moment the workspace opens.
     await fireDueTriggers(run.id, userId);

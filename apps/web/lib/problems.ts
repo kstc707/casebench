@@ -10,6 +10,7 @@ import {
   type ProblemBundle,
   type PublicPersona,
 } from "@casebench/simulation-engine";
+import { authorsOf } from "@casebench/database";
 import { getPool, getScenarioBySlug, listListedScenarios } from "./db";
 
 /**
@@ -26,6 +27,7 @@ export interface CatalogEntry {
   problem: ClientSafeProblem;
   source: "official" | "community";
   authorName?: string | null;
+  authorHandle?: string | null;
   /** When it was published (community) — official ones count as oldest. */
   createdAt?: string;
 }
@@ -34,9 +36,21 @@ export async function getCatalog(): Promise<CatalogEntry[]> {
   const official: CatalogEntry[] = (await listAllProblems()).map((p) => ({ problem: toClientSafe(p), source: "official" }));
   if (process.env.CASEBENCH_COMMUNITY === "off" || !process.env.DATABASE_URL) return official;
   const community: CatalogEntry[] = [];
-  for (const s of await listListedScenarios(getPool())) {
+  const listed = await listListedScenarios(getPool());
+  // Show the creator's current profile name (older scenarios fall back to the stored name).
+  const authors = await authorsOf(getPool(), listed.map((s) => s.slug));
+  for (const s of listed) {
     const v = validateScenario(s.bundle);
-    if (v.ok) community.push({ problem: toClientSafe(v.bundle.problem), source: "community", authorName: s.authorName, createdAt: s.createdAt });
+    const author = authors.get(s.slug);
+    if (v.ok) {
+      community.push({
+        problem: toClientSafe(v.bundle.problem),
+        source: "community",
+        authorName: author?.displayName ?? s.authorName,
+        authorHandle: author?.handle ?? null,
+        createdAt: s.createdAt,
+      });
+    }
   }
   return [...official, ...community];
 }
