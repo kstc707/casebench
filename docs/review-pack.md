@@ -27,17 +27,19 @@ Please give a **candid, specific** review — not encouragement. Cite file paths
 
 # Casebench
 
-> Practice the job before you have the job: messy data, AI coworkers on Slack, and feedback graded
-> against what's actually true.
+> Create, share, and solve realistic simulations of real work.
 
-You're dropped into a realistic analyst assignment at a fictional streaming company. Your manager
-(an AI agent) DMs you the ask. You query six real-looking tables with SQL in your browser. Your
-coworkers **watch what you're doing** and message you on their own: the data engineer pings you
-when you open the sessions table, your manager checks in after a few queries and asks for a status
-update when the VP is waiting. Each coworker knows a different slice of the truth, so you have to
-ask the right person the right question. When you submit, a grader agent scores your write-up
-against facts measured from the very data you saw, and against the queries you actually ran.
-Publish it, and you get a shareable portfolio page.
+Anyone can build an interactive work situation (a broken dashboard, a confusing sign-up flow, a
+production incident, a failed campaign) and anyone else can step into it and try to solve it.
+You don't answer questions about the job. You're dropped into the situation: AI coworkers message
+you on Slack and **notice what you're doing**, each knows a different slice of the truth, there's
+data to query and documents to read, and you hand in a deliverable. A grader agent scores it against
+what was actually true and against what you actually did. Then you rate it, discuss it, and pick
+the next one, sorted by trending, new, top-rated, or a computed **complexity score**.
+
+Think LeetCode's repeatable practice, plus help when you're stuck, plus a community that creates and
+rates the problems, with the static question replaced by a small working environment.
+See **[the vision](docs/vision.md)** for the full product definition and what's built.
 
 ## What's in it
 
@@ -49,10 +51,14 @@ Publish it, and you get a shareable portfolio page.
 | **Grader agent** | Structured-output scoring against the hidden truth + measured facts + your query log |
 | **Run event log** | Every action appended to Postgres; published runs frozen by database triggers |
 | **Portfolio page** | Public record: write-up, grade, every query, the Slack conversation |
-| **Scenario Studio** | Anyone can create a simulation for any role (UX, PM, analyst…) in the app, play it, and share it |
+| **Simulation Studio** | Anyone can create a simulation for any field in the app, play it, share it, and see how solvers do |
+| **Community** | Discovery (trending / new / top rated / hardest), likes, ratings (finishers only), comments with "solved it" badges |
+| **Complexity score** | Five-dimension difficulty profile from the simulation's structure, recalibrated by real solver results |
+| **"I'm stuck"** | A hint ladder: each press makes a coworker give one stronger hint, and the grader sees how many you used |
 
 ## Start here
 
+- **[Vision](docs/vision.md)** — what Casebench is becoming, and an honest status per stage
 - **[How it works](docs/how-the-backend-works.md)** — layers, which file is which, request walkthroughs
 - **[Build log](docs/build-log/README.md)** — every step: what, why, problems hit, how verified, interview notes
 - **[Market research](docs/market-research.md)** — who else does this, and an honest assessment
@@ -182,6 +188,9 @@ when no key is set.
 | `POST /api/runs/:id/submit` | Freeze the write-up, grade it, manager reacts (retry-safe) |
 | `POST /api/runs/:id/publish` | Freeze the run, create the portfolio entry |
 | `GET /api/problems/:slug/data/:file` | Serve a CSV — only files listed in the case's `dataFiles` |
+| `GET /api/simulations/:slug` | Complexity, solver stats, likes/ratings, comments, and what you've done |
+| `POST /api/simulations/:slug/{like,rating,comments}` | Like/unlike; rate 1–5 (finishers only); comment / delete your comment |
+| `POST /api/runs/:id/hint` | "I'm stuck": raise that coworker's hint level by one and get one hint |
 | `/api/studio/scenarios/**` + `/studio` pages | Scenario Studio: create/import, edit (validated on save), list in Community, export, delete |
 | `/portfolio/:runId` (page) | Public record of a published run |
 | `lib/agents.ts` | The orchestrator (fire triggers, reply, post-evaluation reaction) |
@@ -194,10 +203,10 @@ when no key is set.
 | Package | Key files | Responsibility |
 |---|---|---|
 | `domain` | `run.ts`, `entities.ts` | Event types, the run state machine, content/agent types |
-| `database` | `src/runs.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
+| `database` | `src/runs.ts`, `src/scenarios.ts`, `src/social.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
 | `agents` | `triggers.ts`, `hints.ts`, `prompt.ts`, `respond.ts`, `guard.ts`, `evaluator.ts` | The agent engine and the grader |
 | `ai` | `anthropicProvider.ts`, `openaiCompatibleProvider.ts`, `mockProvider.ts`, `config.ts` | Model calls (Claude or Gemini/Groq/…); model choice; offline mode |
-| `simulation-engine` | `loadRolePack.ts`, `scenarioSchema.ts`, `starterScenario.ts` | Load cases; the one schema every scenario must pass; Studio template; strip secrets |
+| `simulation-engine` | `loadRolePack.ts`, `scenarioSchema.ts`, `starterScenario.ts`, `complexity.ts` | Load cases; the one schema every scenario must pass; Studio template; strip secrets |
 | `content-tools` | `streamwave.ts`, `analyzeStreamwave.ts`, `import-scenario.ts` | Seeded data generator + analyzer; promote Studio exports to official files |
 
 ### Content (`content/role-packs/data-analyst/companies/streamwave/`)
@@ -600,8 +609,14 @@ Every `git push` to `main` redeploys automatically. Pull requests get their own 
 - [x] Any AI provider incl. free tiers; browser-only deploys (06)
 - [x] Slack-first dark UI (07)
 - [x] Scenario Studio + multi-role engine + UX-designer case (08)
+- [x] Community layer: discovery, likes, ratings, comments, solver stats, complexity score, "I'm stuck" (09)
 
 ## Next (in priority order)
+
+- [ ] **AI-assisted creation**: "describe the simulation you want" → a validated draft in the Studio (biggest creator-side friction)
+- [ ] Accounts (replace per-browser identity) so creators and solvers keep their history across devices
+- [ ] 5–10 very different simulations (incident debugging, security investigation, product decision, operations)
+- [ ] New environment types: log viewers, file trees, mock APIs, branching decisions
 
 - [ ] Deploy (Vercel + Neon) and run the agent eval with a real key; commit the report
 - [ ] Rate limiting on AI-backed routes before sharing the link publicly
@@ -1524,6 +1539,7 @@ if you want the big picture first.
 | 06 | [Any AI provider (free tiers) + one-click deploys](06-any-ai-provider.md) | `claude/backbone-runs-api` |
 | 07 | [Slack-first, dark workspace UI](07-slack-first-ui.md) | `claude/backbone-runs-api` |
 | 08 | [Scenario Studio: anyone can create simulations, any role](08-scenario-studio.md) | `claude/backbone-runs-api` |
+| 09 | [Community layer: complexity, likes, ratings, comments, "I'm stuck"](09-community-layer.md) | `claude/community-layer` |
 
 
 
@@ -2246,7 +2262,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 ```ts
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { createScenario, getPool, listMyScenarios } from "../../../../lib/db";
+import { createScenario, getPool, listMyScenarios, socialSummaries, solverStats } from "../../../../lib/db";
 import { getUserId } from "../../../../lib/session";
 import { handleRouteError, jsonError, readJsonBody } from "../../../../lib/api";
 import { starterScenario } from "@casebench/simulation-engine";
@@ -2259,7 +2275,15 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const userId = await getUserId();
-    const scenarios = (await listMyScenarios(getPool(), userId)).map((s) => ({
+    const mine = await listMyScenarios(getPool(), userId);
+    const slugs = mine.map((s) => s.slug);
+    const [stats, social] = await Promise.all([solverStats(getPool(), slugs), socialSummaries(getPool(), slugs)]);
+    const scenarios = mine.map((s) => ({
+      attempts: stats.get(s.slug)?.attempts ?? 0,
+      completions: stats.get(s.slug)?.completions ?? 0,
+      avgScore: stats.get(s.slug)?.avgScore ?? null,
+      likes: social.get(s.slug)?.likes ?? 0,
+      ratingAvg: social.get(s.slug)?.ratingAvg ?? null,
       id: s.id,
       slug: s.slug,
       title: (s.bundle as { problem?: { title?: string } }).problem?.title ?? "Untitled",
@@ -2465,64 +2489,53 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ```tsx
 import Link from "next/link";
-import { KNOWN_ROLES } from "@casebench/domain";
-import { getCatalog, type CatalogEntry } from "../lib/problems";
+import { getCatalog } from "../lib/problems";
+import { metaFor } from "../lib/community";
+import { Discover, type DiscoverItem } from "../components/Discover";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function HomePage() {
   const catalog = await getCatalog();
-  const official = catalog.filter((c) => c.source === "official");
-  const community = catalog.filter((c) => c.source === "community");
+  const meta = process.env.DATABASE_URL ? await metaFor(catalog.map((c) => c.problem.slug)) : new Map();
+  const items: DiscoverItem[] = catalog.flatMap(({ problem: p, source, authorName, createdAt }) => {
+    const m = meta.get(p.slug);
+    if (!m) return [];
+    return [
+      {
+        slug: p.slug,
+        title: p.title,
+        category: p.role,
+        concepts: p.concepts.map((c) => c.name),
+        source,
+        authorName,
+        createdAt,
+        complexity: { score: m.complexity.score, label: m.complexity.label },
+        expectedMinutes: m.complexity.expectedMinutes,
+        attempts: m.stats.attempts,
+        attemptsLast7Days: m.stats.attemptsLast7Days,
+        completionRate: m.stats.attempts ? Math.round((100 * m.stats.completions) / m.stats.attempts) : null,
+        likes: m.social.likes,
+        ratingAvg: m.social.ratingAvg,
+        ratingCount: m.social.ratingCount,
+      },
+    ];
+  });
 
   return (
     <main className="page">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ margin: 0 }}>Casebench</h1>
-        <Link href="/studio" className="pill" style={{ padding: "6px 12px", textDecoration: "none" }}>
-          ✎ Scenario Studio — create your own
+        <Link href="/studio" className="pill" style={{ padding: "6px 12px" }}>
+          ✎ Create a simulation
         </Link>
       </div>
-      <p className="muted">
-        Practice the job before you have the job. Work a realistic assignment while AI coworkers message you on Slack,
-        then get graded against what's actually true.
+      <p className="muted" style={{ maxWidth: 720 }}>
+        Create, share, and solve realistic simulations of real work. Don't answer questions about the job — step into a
+        situation, work with AI coworkers, and figure out what to do. Then get evaluated against what was actually true.
       </p>
-
-      <h2 style={{ fontSize: 16, marginTop: 28 }}>Official simulations</h2>
-      <Grid entries={official} />
-
-      <h2 style={{ fontSize: 16, marginTop: 28 }}>Community scenarios</h2>
-      {community.length ? (
-        <Grid entries={community} />
-      ) : (
-        <p className="muted">
-          None yet. <Link href="/studio">Create one in the Studio</Link> — any role, any company.
-        </p>
-      )}
+      <Discover items={items} />
     </main>
-  );
-}
-
-function Grid({ entries }: { entries: CatalogEntry[] }) {
-  return (
-    <div style={{ display: "grid", gap: 12 }}>
-      {entries.map(({ problem: p, authorName, source }) => (
-        <Link key={p.slug} href={`/problems/${p.slug}`} className="card" style={{ textDecoration: "none", color: "inherit" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <strong style={{ fontSize: 16 }}>{p.title}</strong>
-            <span className="muted">
-              {KNOWN_ROLES[p.role] ?? p.role} · {p.difficulty} · ~{p.estimatedMinutes} min
-            </span>
-          </div>
-          {source === "community" && <div className="muted" style={{ fontSize: 12 }}>by {authorName || "anonymous"}</div>}
-          <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {p.concepts.map((c) => (
-              <span key={c.name} className="pill">{c.name}</span>
-            ))}
-          </div>
-        </Link>
-      ))}
-    </div>
   );
 }
 ```
@@ -3110,6 +3123,7 @@ import { Feedback } from "./Feedback";
 import { SqlConsole } from "./SqlConsole";
 import { useChat } from "./useChat";
 import { WriteUp } from "./WriteUp";
+import { Community } from "./Community";
 import { DEFAULT_DELIVERABLE, KNOWN_ROLES } from "@casebench/domain";
 import type { ClientSafeCaseStudy, PublicPersona, RunDetail, ScoredEvaluation, Submission } from "./types";
 
@@ -3198,6 +3212,7 @@ function Workday({
   const [dockId, setDockId] = useState(manager.id);
   const [nudge, setNudge] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const [stuckBusy, setStuckBusy] = useState(false);
   const bump = () => setNudge((n) => n + 1);
 
   useEffect(() => {
@@ -3250,6 +3265,32 @@ function Workday({
             </button>
           ))}
         </div>
+        {!evaluation && (
+          <div style={{ padding: "8px 12px" }}>
+            <button
+              style={{ width: "100%" }}
+              disabled={stuckBusy}
+              title="Ask the coworker you're talking to (or your manager) for one stronger hint"
+              onClick={async () => {
+                const channel = view.kind === "dm" ? view.id : dockId;
+                setStuckBusy(true);
+                openDm(channel);
+                try {
+                  await fetch(`/api/runs/${run.id}/hint`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ channel }),
+                  });
+                } finally {
+                  setStuckBusy(false);
+                  bump();
+                }
+              }}
+            >
+              {stuckBusy ? "Asking…" : "🆘 I'm stuck"}
+            </button>
+          </div>
+        )}
         <div className="sidebar-foot">
           <Link href="/">Casebench</Link>
           <span>{minutes} min in</span>
@@ -3311,7 +3352,12 @@ function Workday({
             />
           )}
           {isApp("feedback") && evaluation && (
-            <Feedback runId={run.id} evaluation={evaluation} labels={labels} published={false} />
+            <>
+              <Feedback runId={run.id} evaluation={evaluation} labels={labels} published={false} />
+              <div className="writeup" style={{ paddingTop: 0 }}>
+                <Community slug={problem.slug} showRatePrompt />
+              </div>
+            </>
           )}
         </div>
       </main>
@@ -3404,10 +3450,13 @@ function StartScreen({
       {run?.status === "published" && (
         <p>Your last attempt is published: <Link href={`/portfolio/${run.id}`}>view it</Link>.</p>
       )}
-      <button className="primary" onClick={onStart} style={{ marginTop: 20, padding: "10px 18px" }}>
-        {run ? "Start a new workday" : "Start your workday"}
+      <button className="primary" onClick={onStart} style={{ margin: "20px 0", padding: "10px 18px" }}>
+        {run ? "Start a new attempt" : "Start the simulation"}
       </button>
       {error && <p className="error">{error}</p>}
+      <div style={{ maxWidth: 680 }}>
+        <Community slug={problem.slug} />
+      </div>
     </main>
   );
 }
@@ -4307,6 +4356,11 @@ import Link from "next/link";
 import { KNOWN_ROLES } from "@casebench/domain";
 
 interface Mine {
+  attempts: number;
+  completions: number;
+  avgScore: number | null;
+  likes: number;
+  ratingAvg: number | null;
   id: string;
   slug: string;
   title: string;
@@ -4362,10 +4416,12 @@ export function StudioHome() {
     <main className="page" style={{ display: "grid", gap: 20 }}>
       <div>
         <Link href="/">← Casebench</Link>
-        <h1 style={{ marginBottom: 4 }}>Scenario Studio</h1>
+        <h1 style={{ marginBottom: 4 }}>Simulation Studio</h1>
         <p className="muted" style={{ marginTop: 0 }}>
-          Create a work simulation for any role: write the brief, invent the AI coworkers and what each of them knows,
-          set the hidden answer key and how it's graded. Then play it yourself or share the link.
+          Create a realistic simulation of any kind of work — data, design, engineering, security, marketing, operations —
+          for others to solve. Write the situation, invent the AI coworkers and what each of them knows, set the hidden
+          answer key and how it's graded. Play it yourself, share the link, then list it for the community. You'll see
+          how many people attempt it, how they score, and what they think.
         </p>
       </div>
 
@@ -4408,6 +4464,11 @@ export function StudioHome() {
               <div className="muted" style={{ fontSize: 12 }}>
                 {KNOWN_ROLES[s.role] ?? s.role} · {s.listed ? "listed in Community" : "unlisted (link only)"} · edited{" "}
                 {new Date(s.updatedAt).toLocaleString()}
+              </div>
+              <div className="muted" style={{ fontSize: 12 }}>
+                {s.attempts} attempts · {s.completions} finished
+                {s.avgScore !== null && ` · avg score ${s.avgScore}`} · ♥ {s.likes}
+                {s.ratingAvg !== null && ` · ★ ${s.ratingAvg}`}
               </div>
             </div>
             <Link href={`/studio/${s.id}`}>Edit</Link>
@@ -4552,7 +4613,7 @@ export function useChat(runId: string, visibleChannels: string[], nudge: number)
 import "server-only";
 import { IllegalTransitionError, type RunEvent } from "@casebench/domain";
 import { getAIProvider } from "@casebench/ai";
-import { dueTriggers, generateAgentMessage, replyInstruction, type ProblemContext } from "@casebench/agents";
+import { currentHintLevel, dueTriggers, generateAgentMessage, hintInstruction, replyInstruction, type ProblemContext } from "@casebench/agents";
 import type { ProblemBundle } from "@casebench/simulation-engine";
 import { appendRunEvent, getPool, getRun, isUniqueViolation } from "./db";
 import { getBundle } from "./problems";
@@ -4657,6 +4718,43 @@ export async function replyToUser(runId: string, userId: string, channel: string
     events: [...run.events, sent],
     now: Date.now(),
     instruction: replyInstruction(text),
+    mock: who.persona.offlineReply,
+  });
+  await appendRunEvent(pool, runId, userId, {
+    type: "message_received",
+    at: new Date().toISOString(),
+    channel,
+    text: reply.text,
+    trigger: null,
+    blocked: reply.blocked,
+  });
+}
+
+/**
+ * "I'm stuck": log the request (which raises this coworker's hint level by
+ * one, in code), then have them give exactly one hint at the new level.
+ */
+export async function requestHint(runId: string, userId: string, channel: string) {
+  const pool = getPool();
+  const run = await getRun(pool, runId, userId);
+  const bundle = await getBundle(run.problemSlug);
+  const who = bundle && agentFor(bundle, channel);
+  if (!bundle || !who) throw new UnknownChannelError(channel);
+
+  const asked: RunEvent = { type: "hint_requested", at: new Date().toISOString(), channel };
+  await appendRunEvent(pool, runId, userId, asked);
+  const events = [...run.events, asked];
+  const level = currentHintLevel(who.agent, events, Date.now());
+
+  const reply = await generateAgentMessage({
+    provider: getAIProvider(),
+    ...who,
+    problem: problemContext(bundle),
+    guards: bundle.agents.leakGuards,
+    events,
+    now: Date.now(),
+    instruction: hintInstruction(level),
+    // Never echo the hint *policy* offline: it's written for the agent and can contain the answer.
     mock: who.persona.offlineReply,
   });
   await appendRunEvent(pool, runId, userId, {
@@ -4774,6 +4872,15 @@ export {
   listMyScenarios,
   listListedScenarios,
   ScenarioNotFoundError,
+  solverStats,
+  socialSummaries,
+  setLike,
+  setRating,
+  NotFinishedError,
+  addComment,
+  listComments,
+  deleteComment,
+  viewerState,
 } from "@casebench/database";
 ```
 
@@ -4808,6 +4915,8 @@ export interface CatalogEntry {
   problem: ClientSafeProblem;
   source: "official" | "community";
   authorName?: string | null;
+  /** When it was published (community) — official ones count as oldest. */
+  createdAt?: string;
 }
 
 export async function getCatalog(): Promise<CatalogEntry[]> {
@@ -4816,7 +4925,7 @@ export async function getCatalog(): Promise<CatalogEntry[]> {
   const community: CatalogEntry[] = [];
   for (const s of await listListedScenarios(getPool())) {
     const v = validateScenario(s.bundle);
-    if (v.ok) community.push({ problem: toClientSafe(v.bundle.problem), source: "community", authorName: s.authorName });
+    if (v.ok) community.push({ problem: toClientSafe(v.bundle.problem), source: "community", authorName: s.authorName, createdAt: s.createdAt });
   }
   return [...official, ...community];
 }
@@ -5927,6 +6036,15 @@ describe("currentHintLevel", () => {
     expect(currentHintLevel(agent, [start], now(41))).toBe(2);
   });
 
+  it("raises the level by one per 'I'm stuck' request, capped at the max", () => {
+    const stuck = (min: number): RunEvent => ({ type: "hint_requested", at: at(min), channel: "priya" });
+    expect(currentHintLevel(agent, [start, stuck(1)], now(2))).toBe(1);
+    expect(currentHintLevel(agent, [start, stuck(1), stuck(2)], now(3))).toBe(2);
+    expect(currentHintLevel(agent, [start, stuck(1), stuck(2), stuck(3)], now(4))).toBe(2);
+    // Requests to someone else don't count for Priya.
+    expect(currentHintLevel(agent, [start, { type: "hint_requested", at: at(1), channel: "sam" }], now(2))).toBe(0);
+  });
+
   it("only counts questions asked to this agent", () => {
     const events = [start, sent(1, "sam", "a"), sent(2, "sam", "b"), sent(3, "sam", "c")];
     expect(currentHintLevel(agent, events, now(4))).toBe(0);
@@ -6126,6 +6244,7 @@ export function processSummary(events: RunEvent[]): string {
     `Minutes from start to submission: ${Math.round(minutes)}`,
     `Queries run: ${qs.length}`,
     `Messages sent to coworkers: ${userMessages(events).length}`,
+    `Hints requested ("I'm stuck"): ${events.filter((e) => e.type === "hint_requested").length}`,
     `All queries (in order):`,
     ...qs.map((q, i) => `${i + 1}. ${q.sql.replace(/\s+/g, " ").slice(0, 400)} → ${q.error ? "error" : `${q.rowCount} rows`}`),
   ].join("\n");
@@ -6136,7 +6255,7 @@ export function buildEvaluatorSystemPrompt(rubric: Rubric, truth: unknown, analy
     `You grade a submission for a professional work simulation. You know the ground truth about the situation; the person being graded did not.`,
     `Score each rubric criterion from ${rubric.scale.min} to ${rubric.scale.max} (integers). Use the weak/strong anchors: ${rubric.scale.max} = matches "strong", ${rubric.scale.min} = matches "weak" or missing.`,
     `Grade what the submission actually shows against what is actually true. Confident claims that contradict the truth score low. Well-supported alternative framings with honest caveats can still score well — this is not keyword matching.`,
-    `Use the process log to check claims: a submission that cites numbers it never queried for deserves skepticism, and good work that shows up in the process deserves credit.`,
+    `Use the process log to check claims: a submission that cites numbers it never queried for deserves skepticism, and good work that shows up in the process deserves credit. Asking for hints is fine; mention it in feedback only if they leaned on hints for the key insight.`,
     ``,
     `Rubric:`,
     ...rubric.criteria.map(
@@ -6267,6 +6386,9 @@ import { minutesElapsed, userMessages } from "./activity";
  * Hints unlock gradually, like a real manager who gets more direct the longer
  * you've been stuck. Level 0 = no hints yet. The level is computed here, in
  * code, and stated in the prompt — the model doesn't decide how much to give.
+ *
+ * Two ways up: time spent / questions asked (automatic), and pressing
+ * "I'm stuck" (each request raises the level by one, up to the agent's max).
  */
 export function currentHintLevel(agent: SimulationAgent, events: RunEvent[], now: number): number {
   const minutes = minutesElapsed(events, now);
@@ -6278,7 +6400,12 @@ export function currentHintLevel(agent: SimulationAgent, events: RunEvent[], now
     const always = h.unlockAfterMinutes === undefined && h.unlockAfterUserMessages === undefined;
     if (always || byTime || byQuestions) level = Math.max(level, h.level);
   }
-  return level;
+  const maxLevel = Math.max(0, ...agent.hintLevels.map((h) => h.level));
+  return Math.min(maxLevel, level + hintsRequested(events, agent.personaId));
+}
+
+export function hintsRequested(events: RunEvent[], channel?: string): number {
+  return events.filter((e) => e.type === "hint_requested" && (!channel || e.channel === channel)).length;
 }
 ```
 
@@ -6420,6 +6547,12 @@ export async function generateAgentMessage(input: AgentTurnInput): Promise<{ tex
 
 export function replyInstruction(userText: string): string {
   return `They just sent you this message: """${userText}""" Reply to it.`;
+}
+
+export function hintInstruction(level: number): string {
+  return level === 0
+    ? `They pressed "I'm stuck", but no hints are unlocked yet. Ask what they've tried so far and encourage them to keep going; don't hint.`
+    : `They pressed "I'm stuck" and asked for a hint. Give exactly ONE hint at level ${level} of your hint policy (the strongest you're allowed right now), in one or two sentences, based on what the activity log shows they've already done. Don't repeat a hint you already gave.`;
 }
 ```
 
@@ -8069,6 +8202,7 @@ try {
 export * from "./pool";
 export * from "./runs";
 export * from "./scenarios";
+export * from "./social";
 ```
 
 ## `packages/database/src/pool.ts`
@@ -8746,8 +8880,8 @@ export async function listListedScenarios(pool: pg.Pool, limit = 50): Promise<St
  */
 
 /**
- * The job a simulation is about. Free text so authors can add new tracks
- * (e.g. "ux-designer"); these are the ones the UI knows how to label.
+ * The field a simulation is about — shown as its category. Free text so
+ * creators can add new ones (e.g. "legal"); these are the ones the UI labels.
  */
 export type Role = string;
 export const KNOWN_ROLES: Record<string, string> = {
@@ -8756,6 +8890,11 @@ export const KNOWN_ROLES: Record<string, string> = {
   "ux-designer": "UX Designer",
   "product-manager": "Product Manager",
   "software-engineer": "Software Engineer",
+  "cybersecurity": "Cybersecurity",
+  "marketing": "Marketing",
+  "finance": "Finance",
+  "operations": "Operations",
+  "customer-support": "Customer Support",
 };
 
 /** One section of the write-up the user submits (e.g. "Executive summary"). */
@@ -9091,6 +9230,8 @@ export type RunEvent =
       trigger: string | null;
       blocked?: boolean;
     }
+  /** The user pressed "I'm stuck": the coworker on `channel` gives one stronger hint. */
+  | { type: "hint_requested"; at: string; channel: string }
   | { type: "submission_drafted"; at: string; draft: unknown }
   | { type: "submission_finalized"; at: string; submission: unknown }
   | { type: "evaluation_returned"; at: string; score: number; feedback: unknown }
@@ -9133,6 +9274,7 @@ export function statusForEvent(event: RunEvent): RunStatus | "keep" | null {
       return "started";
     case "message_sent":
     case "message_received":
+    case "hint_requested":
       return "keep";
     case "brief_viewed":
     case "resource_opened":
@@ -9251,6 +9393,7 @@ export function createRun(problemSlug: string, userId: string): Run {
 export * from "./loadRolePack";
 export * from "./scenarioSchema";
 export * from "./starterScenario";
+export * from "./complexity";
 ```
 
 ## `packages/simulation-engine/src/loadRolePack.test.ts`

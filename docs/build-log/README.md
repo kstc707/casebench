@@ -25,3 +25,4 @@ if you want the big picture first.
 | 06 | [Any AI provider (free tiers) + one-click deploys](06-any-ai-provider.md) | `claude/backbone-runs-api` |
 | 07 | [Slack-first, dark workspace UI](07-slack-first-ui.md) | `claude/backbone-runs-api` |
 | 08 | [Scenario Studio: anyone can create simulations, any role](08-scenario-studio.md) | `claude/backbone-runs-api` |
+| 09 | [Community layer: complexity, likes, ratings, comments, "I'm stuck"](09-community-layer.md) | `claude/community-layer` |

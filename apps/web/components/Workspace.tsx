@@ -10,6 +10,7 @@ import { Feedback } from "./Feedback";
 import { SqlConsole } from "./SqlConsole";
 import { useChat } from "./useChat";
 import { WriteUp } from "./WriteUp";
+import { Community } from "./Community";
 import { DEFAULT_DELIVERABLE, KNOWN_ROLES } from "@casebench/domain";
 import type { ClientSafeCaseStudy, PublicPersona, RunDetail, ScoredEvaluation, Submission } from "./types";
 
@@ -98,6 +99,7 @@ function Workday({
   const [dockId, setDockId] = useState(manager.id);
   const [nudge, setNudge] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const [stuckBusy, setStuckBusy] = useState(false);
   const bump = () => setNudge((n) => n + 1);
 
   useEffect(() => {
@@ -150,6 +152,32 @@ function Workday({
             </button>
           ))}
         </div>
+        {!evaluation && (
+          <div style={{ padding: "8px 12px" }}>
+            <button
+              style={{ width: "100%" }}
+              disabled={stuckBusy}
+              title="Ask the coworker you're talking to (or your manager) for one stronger hint"
+              onClick={async () => {
+                const channel = view.kind === "dm" ? view.id : dockId;
+                setStuckBusy(true);
+                openDm(channel);
+                try {
+                  await fetch(`/api/runs/${run.id}/hint`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ channel }),
+                  });
+                } finally {
+                  setStuckBusy(false);
+                  bump();
+                }
+              }}
+            >
+              {stuckBusy ? "Asking…" : "🆘 I'm stuck"}
+            </button>
+          </div>
+        )}
         <div className="sidebar-foot">
           <Link href="/">Casebench</Link>
           <span>{minutes} min in</span>
@@ -211,7 +239,12 @@ function Workday({
             />
           )}
           {isApp("feedback") && evaluation && (
-            <Feedback runId={run.id} evaluation={evaluation} labels={labels} published={false} />
+            <>
+              <Feedback runId={run.id} evaluation={evaluation} labels={labels} published={false} />
+              <div className="writeup" style={{ paddingTop: 0 }}>
+                <Community slug={problem.slug} showRatePrompt />
+              </div>
+            </>
           )}
         </div>
       </main>
@@ -304,10 +337,13 @@ function StartScreen({
       {run?.status === "published" && (
         <p>Your last attempt is published: <Link href={`/portfolio/${run.id}`}>view it</Link>.</p>
       )}
-      <button className="primary" onClick={onStart} style={{ marginTop: 20, padding: "10px 18px" }}>
-        {run ? "Start a new workday" : "Start your workday"}
+      <button className="primary" onClick={onStart} style={{ margin: "20px 0", padding: "10px 18px" }}>
+        {run ? "Start a new attempt" : "Start the simulation"}
       </button>
       {error && <p className="error">{error}</p>}
+      <div style={{ maxWidth: 680 }}>
+        <Community slug={problem.slug} />
+      </div>
     </main>
   );
 }

@@ -26,6 +26,8 @@ export interface CatalogEntry {
   problem: ClientSafeProblem;
   source: "official" | "community";
   authorName?: string | null;
+  /** When it was published (community) — official ones count as oldest. */
+  createdAt?: string;
 }
 
 export async function getCatalog(): Promise<CatalogEntry[]> {
@@ -34,7 +36,7 @@ export async function getCatalog(): Promise<CatalogEntry[]> {
   const community: CatalogEntry[] = [];
   for (const s of await listListedScenarios(getPool())) {
     const v = validateScenario(s.bundle);
-    if (v.ok) community.push({ problem: toClientSafe(v.bundle.problem), source: "community", authorName: s.authorName });
+    if (v.ok) community.push({ problem: toClientSafe(v.bundle.problem), source: "community", authorName: s.authorName, createdAt: s.createdAt });
   }
   return [...official, ...community];
 }

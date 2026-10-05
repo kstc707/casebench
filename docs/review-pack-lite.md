@@ -27,17 +27,19 @@ Please give a **candid, specific** review — not encouragement. Cite file paths
 
 # Casebench
 
-> Practice the job before you have the job: messy data, AI coworkers on Slack, and feedback graded
-> against what's actually true.
+> Create, share, and solve realistic simulations of real work.
 
-You're dropped into a realistic analyst assignment at a fictional streaming company. Your manager
-(an AI agent) DMs you the ask. You query six real-looking tables with SQL in your browser. Your
-coworkers **watch what you're doing** and message you on their own: the data engineer pings you
-when you open the sessions table, your manager checks in after a few queries and asks for a status
-update when the VP is waiting. Each coworker knows a different slice of the truth, so you have to
-ask the right person the right question. When you submit, a grader agent scores your write-up
-against facts measured from the very data you saw, and against the queries you actually ran.
-Publish it, and you get a shareable portfolio page.
+Anyone can build an interactive work situation (a broken dashboard, a confusing sign-up flow, a
+production incident, a failed campaign) and anyone else can step into it and try to solve it.
+You don't answer questions about the job. You're dropped into the situation: AI coworkers message
+you on Slack and **notice what you're doing**, each knows a different slice of the truth, there's
+data to query and documents to read, and you hand in a deliverable. A grader agent scores it against
+what was actually true and against what you actually did. Then you rate it, discuss it, and pick
+the next one, sorted by trending, new, top-rated, or a computed **complexity score**.
+
+Think LeetCode's repeatable practice, plus help when you're stuck, plus a community that creates and
+rates the problems, with the static question replaced by a small working environment.
+See **[the vision](docs/vision.md)** for the full product definition and what's built.
 
 ## What's in it
 
@@ -49,10 +51,14 @@ Publish it, and you get a shareable portfolio page.
 | **Grader agent** | Structured-output scoring against the hidden truth + measured facts + your query log |
 | **Run event log** | Every action appended to Postgres; published runs frozen by database triggers |
 | **Portfolio page** | Public record: write-up, grade, every query, the Slack conversation |
-| **Scenario Studio** | Anyone can create a simulation for any role (UX, PM, analyst…) in the app, play it, and share it |
+| **Simulation Studio** | Anyone can create a simulation for any field in the app, play it, share it, and see how solvers do |
+| **Community** | Discovery (trending / new / top rated / hardest), likes, ratings (finishers only), comments with "solved it" badges |
+| **Complexity score** | Five-dimension difficulty profile from the simulation's structure, recalibrated by real solver results |
+| **"I'm stuck"** | A hint ladder: each press makes a coworker give one stronger hint, and the grader sees how many you used |
 
 ## Start here
 
+- **[Vision](docs/vision.md)** — what Casebench is becoming, and an honest status per stage
 - **[How it works](docs/how-the-backend-works.md)** — layers, which file is which, request walkthroughs
 - **[Build log](docs/build-log/README.md)** — every step: what, why, problems hit, how verified, interview notes
 - **[Market research](docs/market-research.md)** — who else does this, and an honest assessment
@@ -182,6 +188,9 @@ when no key is set.
 | `POST /api/runs/:id/submit` | Freeze the write-up, grade it, manager reacts (retry-safe) |
 | `POST /api/runs/:id/publish` | Freeze the run, create the portfolio entry |
 | `GET /api/problems/:slug/data/:file` | Serve a CSV — only files listed in the case's `dataFiles` |
+| `GET /api/simulations/:slug` | Complexity, solver stats, likes/ratings, comments, and what you've done |
+| `POST /api/simulations/:slug/{like,rating,comments}` | Like/unlike; rate 1–5 (finishers only); comment / delete your comment |
+| `POST /api/runs/:id/hint` | "I'm stuck": raise that coworker's hint level by one and get one hint |
 | `/api/studio/scenarios/**` + `/studio` pages | Scenario Studio: create/import, edit (validated on save), list in Community, export, delete |
 | `/portfolio/:runId` (page) | Public record of a published run |
 | `lib/agents.ts` | The orchestrator (fire triggers, reply, post-evaluation reaction) |
@@ -194,10 +203,10 @@ when no key is set.
 | Package | Key files | Responsibility |
 |---|---|---|
 | `domain` | `run.ts`, `entities.ts` | Event types, the run state machine, content/agent types |
-| `database` | `src/runs.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
+| `database` | `src/runs.ts`, `src/scenarios.ts`, `src/social.ts`, `migrations/*.sql` | Insert/read runs, append events (row-locked), publish atomically |
 | `agents` | `triggers.ts`, `hints.ts`, `prompt.ts`, `respond.ts`, `guard.ts`, `evaluator.ts` | The agent engine and the grader |
 | `ai` | `anthropicProvider.ts`, `openaiCompatibleProvider.ts`, `mockProvider.ts`, `config.ts` | Model calls (Claude or Gemini/Groq/…); model choice; offline mode |
-| `simulation-engine` | `loadRolePack.ts`, `scenarioSchema.ts`, `starterScenario.ts` | Load cases; the one schema every scenario must pass; Studio template; strip secrets |
+| `simulation-engine` | `loadRolePack.ts`, `scenarioSchema.ts`, `starterScenario.ts`, `complexity.ts` | Load cases; the one schema every scenario must pass; Studio template; strip secrets |
 | `content-tools` | `streamwave.ts`, `analyzeStreamwave.ts`, `import-scenario.ts` | Seeded data generator + analyzer; promote Studio exports to official files |
 
 ### Content (`content/role-packs/data-analyst/companies/streamwave/`)
@@ -600,8 +609,14 @@ Every `git push` to `main` redeploys automatically. Pull requests get their own 
 - [x] Any AI provider incl. free tiers; browser-only deploys (06)
 - [x] Slack-first dark UI (07)
 - [x] Scenario Studio + multi-role engine + UX-designer case (08)
+- [x] Community layer: discovery, likes, ratings, comments, solver stats, complexity score, "I'm stuck" (09)
 
 ## Next (in priority order)
+
+- [ ] **AI-assisted creation**: "describe the simulation you want" → a validated draft in the Studio (biggest creator-side friction)
+- [ ] Accounts (replace per-browser identity) so creators and solvers keep their history across devices
+- [ ] 5–10 very different simulations (incident debugging, security investigation, product decision, operations)
+- [ ] New environment types: log viewers, file trees, mock APIs, branching decisions
 
 - [ ] Deploy (Vercel + Neon) and run the agent eval with a real key; commit the report
 - [ ] Rate limiting on AI-backed routes before sharing the link publicly
@@ -1524,6 +1539,7 @@ if you want the big picture first.
 | 06 | [Any AI provider (free tiers) + one-click deploys](06-any-ai-provider.md) | `claude/backbone-runs-api` |
 | 07 | [Slack-first, dark workspace UI](07-slack-first-ui.md) | `claude/backbone-runs-api` |
 | 08 | [Scenario Studio: anyone can create simulations, any role](08-scenario-studio.md) | `claude/backbone-runs-api` |
+| 09 | [Community layer: complexity, likes, ratings, comments, "I'm stuck"](09-community-layer.md) | `claude/community-layer` |
 
 
 

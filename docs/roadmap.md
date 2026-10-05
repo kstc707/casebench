@@ -11,8 +11,14 @@
 - [x] Any AI provider incl. free tiers; browser-only deploys (06)
 - [x] Slack-first dark UI (07)
 - [x] Scenario Studio + multi-role engine + UX-designer case (08)
+- [x] Community layer: discovery, likes, ratings, comments, solver stats, complexity score, "I'm stuck" (09)
 
 ## Next (in priority order)
+
+- [ ] **AI-assisted creation**: "describe the simulation you want" → a validated draft in the Studio (biggest creator-side friction)
+- [ ] Accounts (replace per-browser identity) so creators and solvers keep their history across devices
+- [ ] 5–10 very different simulations (incident debugging, security investigation, product decision, operations)
+- [ ] New environment types: log viewers, file trees, mock APIs, branching decisions
 
 - [ ] Deploy (Vercel + Neon) and run the agent eval with a real key; commit the report
 - [ ] Rate limiting on AI-backed routes before sharing the link publicly

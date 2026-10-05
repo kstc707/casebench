@@ -4,8 +4,8 @@
  */
 
 /**
- * The job a simulation is about. Free text so authors can add new tracks
- * (e.g. "ux-designer"); these are the ones the UI knows how to label.
+ * The field a simulation is about — shown as its category. Free text so
+ * creators can add new ones (e.g. "legal"); these are the ones the UI labels.
  */
 export type Role = string;
 export const KNOWN_ROLES: Record<string, string> = {
@@ -14,6 +14,11 @@ export const KNOWN_ROLES: Record<string, string> = {
   "ux-designer": "UX Designer",
   "product-manager": "Product Manager",
   "software-engineer": "Software Engineer",
+  "cybersecurity": "Cybersecurity",
+  "marketing": "Marketing",
+  "finance": "Finance",
+  "operations": "Operations",
+  "customer-support": "Customer Support",
 };
 
 /** One section of the write-up the user submits (e.g. "Executive summary"). */

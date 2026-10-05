@@ -5,6 +5,11 @@ import Link from "next/link";
 import { KNOWN_ROLES } from "@casebench/domain";
 
 interface Mine {
+  attempts: number;
+  completions: number;
+  avgScore: number | null;
+  likes: number;
+  ratingAvg: number | null;
   id: string;
   slug: string;
   title: string;
@@ -60,10 +65,12 @@ export function StudioHome() {
     <main className="page" style={{ display: "grid", gap: 20 }}>
       <div>
         <Link href="/">← Casebench</Link>
-        <h1 style={{ marginBottom: 4 }}>Scenario Studio</h1>
+        <h1 style={{ marginBottom: 4 }}>Simulation Studio</h1>
         <p className="muted" style={{ marginTop: 0 }}>
-          Create a work simulation for any role: write the brief, invent the AI coworkers and what each of them knows,
-          set the hidden answer key and how it's graded. Then play it yourself or share the link.
+          Create a realistic simulation of any kind of work — data, design, engineering, security, marketing, operations —
+          for others to solve. Write the situation, invent the AI coworkers and what each of them knows, set the hidden
+          answer key and how it's graded. Play it yourself, share the link, then list it for the community. You'll see
+          how many people attempt it, how they score, and what they think.
         </p>
       </div>
 
@@ -106,6 +113,11 @@ export function StudioHome() {
               <div className="muted" style={{ fontSize: 12 }}>
                 {KNOWN_ROLES[s.role] ?? s.role} · {s.listed ? "listed in Community" : "unlisted (link only)"} · edited{" "}
                 {new Date(s.updatedAt).toLocaleString()}
+              </div>
+              <div className="muted" style={{ fontSize: 12 }}>
+                {s.attempts} attempts · {s.completions} finished
+                {s.avgScore !== null && ` · avg score ${s.avgScore}`} · ♥ {s.likes}
+                {s.ratingAvg !== null && ` · ★ ${s.ratingAvg}`}
               </div>
             </div>
             <Link href={`/studio/${s.id}`}>Edit</Link>

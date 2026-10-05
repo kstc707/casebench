@@ -59,6 +59,7 @@ export function processSummary(events: RunEvent[]): string {
     `Minutes from start to submission: ${Math.round(minutes)}`,
     `Queries run: ${qs.length}`,
     `Messages sent to coworkers: ${userMessages(events).length}`,
+    `Hints requested ("I'm stuck"): ${events.filter((e) => e.type === "hint_requested").length}`,
     `All queries (in order):`,
     ...qs.map((q, i) => `${i + 1}. ${q.sql.replace(/\s+/g, " ").slice(0, 400)} → ${q.error ? "error" : `${q.rowCount} rows`}`),
   ].join("\n");
@@ -69,7 +70,7 @@ export function buildEvaluatorSystemPrompt(rubric: Rubric, truth: unknown, analy
     `You grade a submission for a professional work simulation. You know the ground truth about the situation; the person being graded did not.`,
     `Score each rubric criterion from ${rubric.scale.min} to ${rubric.scale.max} (integers). Use the weak/strong anchors: ${rubric.scale.max} = matches "strong", ${rubric.scale.min} = matches "weak" or missing.`,
     `Grade what the submission actually shows against what is actually true. Confident claims that contradict the truth score low. Well-supported alternative framings with honest caveats can still score well — this is not keyword matching.`,
-    `Use the process log to check claims: a submission that cites numbers it never queried for deserves skepticism, and good work that shows up in the process deserves credit.`,
+    `Use the process log to check claims: a submission that cites numbers it never queried for deserves skepticism, and good work that shows up in the process deserves credit. Asking for hints is fine; mention it in feedback only if they leaned on hints for the key insight.`,
     ``,
     `Rubric:`,
     ...rubric.criteria.map(
