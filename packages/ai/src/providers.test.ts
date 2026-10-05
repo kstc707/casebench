@@ -75,8 +75,8 @@ describe("provider selection", () => {
     process.env.GEMINI_API_KEY = "g";
     expect(providerName()).toBe("gemini");
     expect(getAIProvider().kind).toBe("openai-compatible");
-    expect(agentModel()).toBe("gemini-2.5-flash-lite");
-    expect(evaluatorModel()).toBe("gemini-2.5-flash");
+    expect(agentModel()).toBe("gemini-3.5-flash-lite");
+    expect(evaluatorModel()).toBe("gemini-3.5-flash");
   });
 
   it("prefers Anthropic when its key is set, and env overrides models", () => {

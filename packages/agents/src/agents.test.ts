@@ -4,7 +4,7 @@ import { MockAIProvider } from "@casebench/ai";
 import { dueTriggers } from "./triggers";
 import { currentHintLevel } from "./hints";
 import { applyLeakGuards } from "./guard";
-import { generateAgentMessage, replyInstruction } from "./respond";
+import { AI_UNAVAILABLE, generateAgentMessage, replyInstruction } from "./respond";
 import { evaluateSubmission, heuristicEvaluation, parseSubmission, weightedScore } from "./evaluator";
 import { summarizeActivity } from "./activity";
 
@@ -134,6 +134,17 @@ describe("generateAgentMessage", () => {
     expect(call.user).toContain("select * from sessions");
     expect(call.user).toContain("You (new teammate): where should I start?");
     expect(call.model).toBe("claude-haiku-4-5");
+  });
+
+  it("posts a notice instead of throwing when the AI provider fails", async () => {
+    const failing = { complete: async () => { throw new Error("LLM API error 429"); } } as unknown as MockAIProvider;
+    const result = await generateAgentMessage({
+      provider: failing, persona, agent, guards, events: [start], now: now(1),
+      problem: { title: "Why?", brief: "b", managerName: "Priya" },
+      instruction: replyInstruction("hi"),
+      mock: "x",
+    });
+    expect(result).toEqual({ text: AI_UNAVAILABLE, blocked: false });
   });
 
   it("runs the reply through the leak guard", async () => {
