@@ -335,3 +335,24 @@ table.grid tr:hover td { background: var(--bg-subtle); }
 .modal h2 { font-size: 22px; font-weight: 800; }
 .profile-key { display: block; padding: 12px; border-radius: 6px; background: var(--code-bg); border: 1px dashed var(--border-strong); color: var(--code-text); font-size: 20px; letter-spacing: 2px; text-align: center; user-select: all; font-family: var(--mono); }
 .solver { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+
+/* Feedback form */
+.feedback-form { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
+.feedback-form fieldset { border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); padding: 14px 16px; margin: 0; min-width: 0; }
+.feedback-form legend { font-weight: 700; padding: 0 4px; }
+.feedback-form select, .feedback-form textarea, .feedback-form input:not([type="radio"]) { width: 100%; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 14px; }
+.choice.on { border-color: var(--accent); background: var(--panel-2); font-weight: 600; }
+.choice input { margin: 0; width: auto; flex: none; padding: 0; }
+.choice { white-space: nowrap; }
+.feedback-form label.open .muted { font-weight: 400; }
+.ratings { display: flex; flex-direction: column; gap: 10px; }
+.rating-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.scale { display: flex; gap: 4px; }
+.scale button { width: 36px; padding: 6px 0; text-align: center; }
+.scale button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.feedback-form label.open { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.feedback-done { margin-top: 20px; }
+.fb-bar { height: 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+.fb-bar > span { display: block; height: 100%; background: var(--accent); }
