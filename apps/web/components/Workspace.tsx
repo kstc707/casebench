@@ -255,6 +255,9 @@ function Workday({
               <Feedback runId={run.id} evaluation={evaluation} labels={labels} published={false} />
               <div className="writeup" style={{ paddingTop: 0 }}>
                 <Community slug={problem.slug} showRatePrompt />
+                <p className="muted" style={{ marginTop: 16 }}>
+                  How did this feel? <a href={`/feedback?problem=${encodeURIComponent(problem.slug)}`}>Give 3 minutes of feedback</a>.
+                </p>
               </div>
             </>
           )}
