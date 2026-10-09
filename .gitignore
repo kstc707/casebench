@@ -10,3 +10,5 @@ apps/web/next-env.d.ts
 *.tsbuildinfo
 apps/web/public/duckdb/
 /review-pack.md
+apps/web/public/pyodide/
+apps/web/public/pyodide-wheels/
