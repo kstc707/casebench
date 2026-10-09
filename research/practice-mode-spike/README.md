@@ -91,3 +91,9 @@ unpacks wheels downloaded from PyPI (`pip download --only-binary=:all: --no-deps
 iniconfig packaging pluggy pygments freezegun python-dateutil six`); a browser would fetch them with
 `micropip`. It expects `task/before/` (the project at the base commit plus the fix's tests) and
 `task/fix/time.py` next to it.
+
+## Used by the app
+
+`export_tasks.py` turns usable commits into the task files in `content/practice/` that practice mode
+loads (see `docs/build-log/14-practice-mode.md`). The app runs them with its own copy of the runner,
+`apps/web/lib/practice/runner.py`.

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createdBy, getUserByHandle, solvedBy } from "@casebench/database";
 import { getPool } from "../../../lib/db";
 import { getBundle } from "../../../lib/problems";
+import { practiceTaskForRun } from "../../../lib/practice/tasks";
 import { getProfile } from "../../../lib/session";
 import { Face } from "../../../components/Profile";
 import { Shell } from "../../../components/Shell";
@@ -23,8 +24,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
   const [viewer, solved, created] = await Promise.all([getProfile(), solvedBy(pool, user.id), createdBy(pool, user.id)]);
   const isMe = viewer?.id === user.id;
   const title = async (slug: string) => {
+    const practice = await practiceTaskForRun(slug);
+    if (practice) return { title: practice.title, role: null, practice: practice.project.name, href: `/practice/${practice.slug}` };
     const b = await getBundle(slug);
-    return b ? { title: b.problem.title, role: b.problem.role } : null;
+    return b ? { title: b.problem.title, role: b.problem.role, practice: null, href: `/problems/${slug}` } : null;
   };
   const solvedRows = (await Promise.all(solved.map(async (s) => ({ ...s, info: await title(s.slug) })))).filter((s) => s.info);
   const createdRows = (await Promise.all(created.map(async (c) => ({ ...c, info: await title(c.slug) })))).filter((c) => c.info);
@@ -61,11 +64,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
               <div className="issues">
                 {solvedRows.length === 0 && <p className="muted" style={{ padding: "12px 14px", margin: 0 }}>Nothing solved yet.</p>}
                 {solvedRows.map((s) => (
-                  <Link key={s.slug} href={`/problems/${s.slug}`} className="issue-row" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
+                  <Link key={s.slug} href={s.info!.href} className="issue-row" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
                     <span>
                       <div className="issue-title">{s.info!.title}</div>
                       <div className="issue-meta">
-                        <RoleLabel role={s.info!.role} />
+                        {s.info!.practice ? <span className="pill">Practice · {s.info!.practice}</span> : <RoleLabel role={s.info!.role!} />}
                         <span>Solved {new Date(s.firstSolvedAt).toLocaleDateString()}</span>
                         {s.attempts > 1 && <span>· {s.attempts} attempts</span>}
                       </div>
@@ -80,11 +83,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ handle
               <div className="issues">
                 {createdRows.length === 0 && <p className="muted" style={{ padding: "12px 14px", margin: 0 }}>No published problems yet.</p>}
                 {createdRows.map((c) => (
-                  <Link key={c.slug} href={`/problems/${c.slug}`} className="issue-row" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
+                  <Link key={c.slug} href={c.info!.href} className="issue-row" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
                     <span>
                       <div className="issue-title">{c.info!.title}</div>
                       <div className="issue-meta">
-                        <RoleLabel role={c.info!.role} />
+                        <RoleLabel role={c.info!.role!} />
                         <span>Published {new Date(c.createdAt).toLocaleDateString()}</span>
                       </div>
                     </span>

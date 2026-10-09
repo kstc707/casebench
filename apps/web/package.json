@@ -3,15 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/prepare-pyodide.mjs && next dev",
+    "build": "node scripts/prepare-pyodide.mjs && next build",
     "typecheck": "tsc --noEmit",
     "start": "next start",
     "duckdb:local": "node scripts/copy-duckdb.mjs",
     "vercel-build": "node scripts/prepare-pyodide.mjs && pnpm --filter @casebench/database migrate && next build",
-    "pyodide": "node scripts/prepare-pyodide.mjs",
-    "predev": "node scripts/prepare-pyodide.mjs",
-    "prebuild": "node scripts/prepare-pyodide.mjs"
+    "pyodide": "node scripts/prepare-pyodide.mjs"
   },
   "dependencies": {
     "@casebench/agents": "workspace:^",

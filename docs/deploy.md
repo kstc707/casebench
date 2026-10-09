@@ -47,7 +47,9 @@ You don't need to create tables. The app does it automatically on every deploy (
    | `GEMINI_API_KEY` | your Gemini key (or one of the other provider keys) |
 
 4. Click **Deploy**. The build runs `vercel-build`, which **creates or updates the database tables
-   first** and then builds the app. About 2–3 minutes.
+   first** and then builds the app. About 2–3 minutes. It also downloads practice mode's pinned
+   Python test tools from PyPI (see `apps/web/scripts/prepare-pyodide.mjs`), so the build needs
+   internet access, which Vercel's builders have.
 5. Open the URL Vercel gives you and go to `/problems/watch-time-decline`.
 
 Every `git push` to `main` redeploys automatically. Pull requests get their own preview URL.

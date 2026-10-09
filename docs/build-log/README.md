@@ -30,3 +30,4 @@ if you want the big picture first.
 | 11 | [Profiles: who created it, who solved it, how many](11-profiles.md) | `claude/accounts` |
 | 12 | [The author agent: researches real problems and writes simulations](12-author-agent.md) | `claude/author-agent` |
 | 13 | [Redesign: a real workplace, not a generic AI dashboard](13-workplace-ui.md) | `claude/workplace-ui` |
+| 14 | [Practice mode: fix a real bug, graded by its own tests](14-practice-mode.md) | `claude/practice-mode` |

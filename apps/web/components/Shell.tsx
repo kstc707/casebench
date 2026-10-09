@@ -6,10 +6,10 @@ import { ProfileChip, useProfile } from "./Profile";
 
 /**
  * The frame around everything outside a simulation, like a work tool:
- * a left nav (Problems, Create, your profile, the author agent for admins)
+ * a left nav (Problems, Practice, Create, your profile, the author agent for admins)
  * and a top bar with breadcrumbs.
  */
-export function Shell({ active, crumbs, children }: { active?: "problems" | "create" | "profile" | "agent"; crumbs?: ReactNode; children: ReactNode }) {
+export function Shell({ active, crumbs, children }: { active?: "problems" | "practice" | "create" | "profile" | "agent"; crumbs?: ReactNode; children: ReactNode }) {
   const me = useProfile();
   const link = (key: typeof active, href: string, icon: string, label: string) => (
     <Link href={href} className={active === key ? "active" : ""}>
@@ -25,6 +25,7 @@ export function Shell({ active, crumbs, children }: { active?: "problems" | "cre
         </Link>
         <div className="shell-links">
           {link("problems", "/", "▤", "Problems")}
+          {link("practice", "/practice", "⌘", "Practice")}
           {link("create", "/studio", "✎", "Create")}
           {me && link("profile", `/u/${me.handle}`, "◉", "Your work")}
         </div>
