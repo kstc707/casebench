@@ -73,3 +73,21 @@ couldn't run". The lesson: **always tell "the environment is broken" apart from 
 - Projects in other languages (JavaScript, Go, …) and bigger projects.
 - Whether these tasks are the right difficulty for beginners, which needs people to try them.
 - How long a learner takes, and how the AI team would guide them.
+
+## Follow-up: running the tests in the browser (Pyodide)
+
+Practice mode would run the learner's tests in their own browser with [Pyodide](https://pyodide.org)
+(Python compiled to WebAssembly): no server sandbox, no cost per run, and the learner's code can't
+reach our servers. `pyodide-check.mjs` checks this with Node, which runs the same Pyodide build:
+
+| Task: "Fix `naturaldelta` truncating years" | In Pyodide | Native Python |
+|---|---|---|
+| Before the fix | 2 failed, 390 passed | 2 failed, 390 passed |
+| After the real fix | 392 passed | 392 passed |
+
+Start-up (Python plus pytest and freezegun) took about 3 s, and each test run 3–5 s. pytest 9 needs
+`pygments` as well as its usual dependencies. This sandbox blocks Pyodide's package CDN, so the check
+unpacks wheels downloaded from PyPI (`pip download --only-binary=:all: --no-deps -d wheels pytest
+iniconfig packaging pluggy pygments freezegun python-dateutil six`); a browser would fetch them with
+`micropip`. It expects `task/before/` (the project at the base commit plus the fix's tests) and
+`task/fix/time.py` next to it.
