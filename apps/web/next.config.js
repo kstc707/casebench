@@ -14,7 +14,7 @@ const nextConfig = {
   // every server function. Without this, a deployed dashboard is empty.
   outputFileTracingRoot: path.join(__dirname, "../.."),
   outputFileTracingIncludes: {
-    "/**": ["../../content/role-packs/**/*"],
+    "/**": ["../../content/role-packs/**/*", "../../content/practice/**/*"],
   },
   // DuckDB-WASM only ever runs in the browser. Keep the server bundle from
   // pulling in its Node build (which webpack can't analyse statically).

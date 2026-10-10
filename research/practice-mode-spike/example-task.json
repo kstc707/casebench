@@ -1,0 +1,26 @@
+{
+  "repo": "https://github.com/python-humanize/humanize.git",
+  "fix_commit": "392aef707c0e74341ab4a51420984e9ea6b566c5",
+  "base_commit": "ca892b368a535a79cc5e2181d052245b94fd6652",
+  "title": "Fix `naturaldelta` truncating years instead of rounding (#295)",
+  "test_files": [
+    "tests/test_time.py"
+  ],
+  "source_files": [
+    "src/humanize/time.py"
+  ],
+  "fail_to_pass": [
+    "tests.test_time::test_naturaldelta[test_input34-3 years]",
+    "tests.test_time::test_naturaldelta[test_input35-3 years]"
+  ],
+  "pass_to_pass": [
+    "tests.test_time::test_date_and_delta",
+    "tests.test_time::test_naturaldate[None-None]",
+    "tests.test_time::test_naturaldate[Not a date at all.-Not a date at all.]",
+    "... (387 more)"
+  ],
+  "broken_by_fix": [],
+  "tests_run": 392,
+  "usable": true,
+  "reason": "2 test(s) prove the fix"
+}

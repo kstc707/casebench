@@ -335,3 +335,32 @@ table.grid tr:hover td { background: var(--bg-subtle); }
 .modal h2 { font-size: 22px; font-weight: 800; }
 .profile-key { display: block; padding: 12px; border-radius: 6px; background: var(--code-bg); border: 1px dashed var(--border-strong); color: var(--code-text); font-size: 20px; letter-spacing: 2px; text-align: center; user-select: all; font-family: var(--mono); }
 .solver { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+
+/* Practice mode: task on the left, code on the right (like LeetCode) */
+.practice { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); height: calc(100vh - 53px); min-height: 520px; }
+.practice-side { border-right: 1px solid var(--border); background: var(--panel); min-height: 0; display: flex; flex-direction: column; }
+.practice-scroll { overflow: auto; padding: 20px; }
+.practice-h { font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2); margin: 20px 0 8px; }
+.practice-tests { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.practice-test { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.practice-test code { word-break: break-all; }
+.practice-test-icon { width: 16px; flex: none; text-align: center; font-weight: 700; color: var(--muted); }
+.practice-test.passed .practice-test-icon { color: var(--good); }
+.practice-test.failed .practice-test-icon, .practice-test.missing .practice-test-icon { color: var(--bad); }
+.practice-pre { background: var(--code-bg); color: var(--code-text); font-family: var(--mono); font-size: 12px; padding: 8px 10px; border-radius: 4px; overflow: auto; max-height: 220px; white-space: pre-wrap; margin: 6px 0 0; }
+.practice-solved { background: var(--accent-soft); border: 1px solid var(--good); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
+.practice-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.practice-tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--border); background: var(--bg-subtle); align-items: flex-end; flex-wrap: wrap; }
+.practice-tabs button { border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; background: transparent; padding: 6px 12px; font-family: var(--mono); font-size: 13px; }
+.practice-tabs button.on { background: var(--panel); border-color: var(--border); font-weight: 700; }
+.practice-tabs select { margin: 0 0 4px auto; width: auto; font-size: 13px; padding: 3px 6px; }
+.practice-file-bar { display: flex; align-items: center; gap: 10px; padding: 4px 12px; font-size: 12px; font-family: var(--mono); border-bottom: 1px solid var(--border); }
+.practice-file-bar .link { margin-left: auto; font-family: inherit; font-size: 12px; }
+.practice-editor { flex: 1; min-height: 0; overflow: hidden; }
+.practice-editor .cm-editor { height: 100%; font-size: 13px; }
+.practice-bar { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-top: 1px solid var(--border); background: var(--panel); flex-wrap: wrap; }
+@media (max-width: 900px) {
+  .practice { grid-template-columns: 1fr; height: auto; }
+  .practice-side { border-right: none; border-bottom: 1px solid var(--border); }
+  .practice-editor { height: 60vh; flex: none; }
+}

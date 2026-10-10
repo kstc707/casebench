@@ -20,6 +20,12 @@ export type RunEvent =
   | { type: "resource_opened"; at: string; resourceTitle: string }
   /** A SQL query the user ran in the sandbox — this is how agents "watch" the work. */
   | { type: "query_run"; at: string; sql: string; rowCount: number | null; error: string | null }
+  /**
+   * Practice mode: the user ran the task's tests (in their browser). `failing`
+   * holds the ids of tests that didn't pass (capped), so the log shows how the
+   * fix progressed.
+   */
+  | { type: "tests_run"; at: string; passed: number; total: number; failing: string[]; error: string | null }
   /** The user posted in a Slack channel (channel = the agent persona's id). */
   | { type: "message_sent"; at: string; channel: string; text: string }
   /**
@@ -84,6 +90,7 @@ export function statusForEvent(event: RunEvent): RunStatus | "keep" | null {
     case "brief_viewed":
     case "resource_opened":
     case "query_run":
+    case "tests_run":
     case "submission_drafted":
       return "in_progress";
     case "submission_finalized":
