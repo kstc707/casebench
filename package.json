@@ -9,6 +9,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "db:migrate": "pnpm --filter @casebench/database migrate",
+    "team:ask": "tsx packages/team-memory/src/ask.ts",
     "review-pack": "node scripts/review-pack.mjs docs/review-pack.md && node scripts/review-pack.mjs docs/review-pack-lite.md --lite"
   },
   "devDependencies": {

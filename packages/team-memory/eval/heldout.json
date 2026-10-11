@@ -1,0 +1,301 @@
+{
+ "about": "Tester's UNSEEN questions for step 3 (Oct 2026). HELD OUT: report these numbers, never tune thresholds or synonyms on them. Same format as calibration.json (expect quotes may be anywhere in the passage). A17–A20 (\"casual\": true) were added in step 5 from the tester's casual probes: short questions with one rare word our notes use and one or two they never use (known share 0.25–0.43). They exist so the golden test fails if search ever hides a real answer because of a low known share again.",
+ "questions": [
+  {
+   "id": "A1",
+   "q": "Why did we drop the SQL engine the old prototype used and go with DuckDB?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "54 seconds"
+    },
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "AlaSQL was too weak"
+    }
+   ]
+  },
+  {
+   "id": "A2",
+   "q": "When Gemini says it's overloaded, how many times do we retry and how long do we wait between tries?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/10-first-deploy.md",
+     "quote": "two retries, after 1 s and then 3 s"
+    }
+   ]
+  },
+  {
+   "id": "A3",
+   "q": "How do we keep one lone five-star review from pushing a sim to the top of the chart?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/09-community-layer.md",
+     "quote": "Bayesian average"
+    }
+   ]
+  },
+  {
+   "id": "A4",
+   "q": "What goes into the login cookie, and why does it have to be signed?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/11-profiles.md",
+     "quote": "User ids aren't secret"
+    }
+   ]
+  },
+  {
+   "id": "A5",
+   "q": "Is there a gotcha with killing background processes by matching their name?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/lessons/tester.md",
+     "quote": "pkill -f"
+    }
+   ]
+  },
+  {
+   "id": "A6",
+   "q": "Why do we lock each Python package download to an exact checksum?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/14-practice-mode.md",
+     "quote": "pinned by version and SHA-256"
+    },
+    {
+     "file": ".claude/team/lessons/engineer.md",
+     "quote": "Pin every wheel by version and sha256"
+    }
+   ]
+  },
+  {
+   "id": "A7",
+   "q": "Why do the analysts' SQL queries execute in the browser and not against our server database?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "No per-user database load"
+    },
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "Nothing about the data is secret"
+    }
+   ]
+  },
+  {
+   "id": "A8",
+   "q": "How many people need to complete a simulation before the difficulty rating starts using actual player outcomes?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/09-community-layer.md",
+     "quote": "once ≥ 5 people have finished"
+    }
+   ]
+  },
+  {
+   "id": "A9",
+   "q": "If I ask for somebody else's attempt by id, why do I get a not-found rather than forbidden?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/01-run-backbone.md",
+     "quote": "Doesn't reveal that a run id exists"
+    }
+   ]
+  },
+  {
+   "id": "A10",
+   "q": "How do we get reliable JSON back from free providers that lack strict schema support?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/06-any-ai-provider.md",
+     "quote": "puts the JSON Schema"
+    }
+   ]
+  },
+  {
+   "id": "A11",
+   "q": "What went wrong when a commit accidentally included an unrelated component and CI went red?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/lessons/engineer.md",
+     "quote": "Never `git add -A`"
+    }
+   ]
+  },
+  {
+   "id": "A12",
+   "q": "Why doesn't the author agent just ask the model to write the dataset rows itself?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/12-author-agent.md",
+     "quote": "Rows from a model are inconsistent"
+    }
+   ]
+  },
+  {
+   "id": "A13",
+   "q": "Roughly how many graded submissions per day can we handle on the free Gemini plan?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/10-first-deploy.md",
+     "quote": "roughly 20 graded submissions a day"
+    }
+   ]
+  },
+  {
+   "id": "A14",
+   "q": "What error showed up in the production logs the first time we went live and every AI request blew up?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/10-first-deploy.md",
+     "quote": "is no longer available to new users"
+    }
+   ]
+  },
+  {
+   "id": "A15",
+   "q": "How many duplicate re-sends did the window-function check turn up on app version 5.2.0?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "1,250"
+    }
+   ]
+  },
+  {
+   "id": "A16",
+   "q": "Why is the overall grade computed in code rather than by the model?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/05-grading-and-portfolio.md",
+     "quote": "the model can't do arithmetic wrong"
+    },
+    {
+     "file": "docs/build-log/05-grading-and-portfolio.md",
+     "quote": "The overall score is computed in code"
+    }
+   ]
+  },
+  {
+   "id": "A17",
+   "q": "Why did we ditch AlaSQL?",
+   "kind": "answerable",
+   "casual": true,
+   "expect": [
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "AlaSQL was too weak"
+    },
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "Why did you switch from AlaSQL?"
+    },
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "54 seconds"
+    }
+   ]
+  },
+  {
+   "id": "A18",
+   "q": "whats the deal with pkill",
+   "kind": "answerable",
+   "casual": true,
+   "expect": [
+    {
+     "file": ".claude/team/lessons/tester.md",
+     "quote": "pkill -f"
+    }
+   ]
+  },
+  {
+   "id": "A19",
+   "q": "Which hashing scheme protects passkeys?",
+   "kind": "answerable",
+   "casual": true,
+   "expect": [
+    {
+     "file": "docs/build-log/11-profiles.md",
+     "quote": "a SHA-256 hash is enough"
+    },
+    {
+     "file": "docs/build-log/11-profiles.md",
+     "quote": "stored only as a hash"
+    },
+    {
+     "file": "docs/build-log/11-profiles.md",
+     "quote": "only its hash is stored"
+    }
+   ]
+  },
+  {
+   "id": "A20",
+   "q": "How are stars averaged so one rave doesn't dominate?",
+   "kind": "answerable",
+   "casual": true,
+   "expect": [
+    {
+     "file": "docs/build-log/09-community-layer.md",
+     "quote": "Bayesian average"
+    }
+   ]
+  },
+  {
+   "id": "N1",
+   "q": "What's a good recipe for banana bread?",
+   "kind": "off-topic"
+  },
+  {
+   "id": "N2",
+   "q": "Who won the 2022 FIFA World Cup final?",
+   "kind": "off-topic"
+  },
+  {
+   "id": "N3",
+   "q": "How do I set up a VPN on my home router?",
+   "kind": "off-topic"
+  },
+  {
+   "id": "N4",
+   "q": "Which Postgres major version is our Neon database running?",
+   "kind": "near-miss"
+  },
+  {
+   "id": "N5",
+   "q": "How many people created a profile during the first week after launch?",
+   "kind": "near-miss"
+  },
+  {
+   "id": "N6",
+   "q": "What hex colour code is the plum sidebar in the Slack-style workspace?",
+   "kind": "near-miss"
+  },
+  {
+   "id": "N7",
+   "q": "Which Playwright version do the browser tests pin?",
+   "kind": "near-miss"
+  },
+  {
+   "id": "N8",
+   "q": "What's the Groq tokens-per-minute cap on the paid plan?",
+   "kind": "near-miss"
+  }
+ ]
+}

@@ -29,3 +29,16 @@ terms on first use, prefer plain language, and point to exact files.
 - The case-study truth model must never reach the client; keep the leak test passing.
 - Before pushing: `pnpm typecheck`, `pnpm test` (with `TEST_DATABASE_URL` set), and
   `pnpm --filter @casebench/web build`. UI changes: also click through the flow in a browser.
+
+## The dev team
+
+Casebench is built by a team of AI agents with the owner, using Research → Plan → Implement:
+`researcher`, `planner`, `engineer`, `reviewer`, `tester`, `docs-writer` (`.claude/agents/`). Run them
+with the `/rpi` workflow (`.claude/skills/rpi/SKILL.md`). The owner approves every plan before code, and
+decides every merge. The `cofounder` agent is the owner's strategic partner; `/talk <agent>` opens a
+one-on-one chat with any team member.
+
+Read `.claude/team/vision-anchor.md` (the owner's words; only the owner edits it) and
+`.claude/team/decisions.md` before proposing product changes. After each section, the team records what
+it learned in `.claude/team/lessons/`, so read your lessons before you start. How it all works:
+`.claude/team/README.md`.

@@ -1,0 +1,17 @@
+{
+  "name": "@casebench/team-memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "eval": "tsx eval/run.ts",
+    "ask": "tsx src/ask.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
