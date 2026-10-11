@@ -8,8 +8,11 @@ import { describe, expect, it } from "vitest";
 import { findRepoRoot } from "./corpus";
 
 const root = findRepoRoot();
+// When the tests themselves run under `pnpm -s test`, pnpm sets npm_config_reporter=silent, and the
+// child pnpm would inherit it and act as if -s were given. Drop it so each case controls -s itself.
+const { npm_config_reporter: _reporter, ...childEnv } = process.env;
 const run = (args: string[], silent = true) =>
-  spawnSync("pnpm", [...(silent ? ["-s"] : []), "team:ask", ...args], { cwd: root, encoding: "utf-8" });
+  spawnSync("pnpm", [...(silent ? ["-s"] : []), "team:ask", ...args], { cwd: root, encoding: "utf-8", env: childEnv });
 
 describe("pnpm team:ask (the real command)", { timeout: 60_000 }, () => {
   it("--json prints only JSON, with passages for a question about our notes", () => {

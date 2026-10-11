@@ -1,5 +1,5 @@
 {
- "about": "Tester's UNSEEN questions for step 3 (Oct 2026). HELD OUT: report these numbers, never tune thresholds or synonyms on them. Same format as calibration.json (expect quotes may be anywhere in the passage).",
+ "about": "Tester's UNSEEN questions for step 3 (Oct 2026). HELD OUT: report these numbers, never tune thresholds or synonyms on them. Same format as calibration.json (expect quotes may be anywhere in the passage). A17–A20 (\"casual\": true) were added in step 5 from the tester's casual probes: short questions with one rare word our notes use and one or two they never use (known share 0.25–0.43). They exist so the golden test fails if search ever hides a real answer because of a low known share again.",
  "questions": [
   {
    "id": "A1",
@@ -190,6 +190,70 @@
     {
      "file": "docs/build-log/05-grading-and-portfolio.md",
      "quote": "The overall score is computed in code"
+    }
+   ]
+  },
+  {
+   "id": "A17",
+   "q": "Why did we ditch AlaSQL?",
+   "kind": "answerable",
+   "casual": true,
+   "expect": [
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "AlaSQL was too weak"
+    },
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "Why did you switch from AlaSQL?"
+    },
+    {
+     "file": "docs/build-log/03-workspace-and-sql.md",
+     "quote": "54 seconds"
+    }
+   ]
+  },
+  {
+   "id": "A18",
+   "q": "whats the deal with pkill",
+   "kind": "answerable",
+   "casual": true,
+   "expect": [
+    {
+     "file": ".claude/team/lessons/tester.md",
+     "quote": "pkill -f"
+    }
+   ]
+  },
+  {
+   "id": "A19",
+   "q": "Which hashing scheme protects passkeys?",
+   "kind": "answerable",
+   "casual": true,
+   "expect": [
+    {
+     "file": "docs/build-log/11-profiles.md",
+     "quote": "a SHA-256 hash is enough"
+    },
+    {
+     "file": "docs/build-log/11-profiles.md",
+     "quote": "stored only as a hash"
+    },
+    {
+     "file": "docs/build-log/11-profiles.md",
+     "quote": "only its hash is stored"
+    }
+   ]
+  },
+  {
+   "id": "A20",
+   "q": "How are stars averaged so one rave doesn't dominate?",
+   "kind": "answerable",
+   "casual": true,
+   "expect": [
+    {
+     "file": "docs/build-log/09-community-layer.md",
+     "quote": "Bayesian average"
     }
    ]
   },

@@ -1,5 +1,5 @@
 {
- "about": "Librarian risk-check questions (step 1, Oct 2026), used to CALIBRATE the label threshold in src/search.ts. kind: answerable (expect = any of these passages, found by file + a quote from its first line), near-miss (on-topic, but the memory doesn't hold the answer), off-topic. Expected passages were converted from the spike's line ranges: every passage that overlapped the range is listed.",
+ "about": "Librarian risk-check questions (step 1, Oct 2026), used to CALIBRATE the label threshold in src/search.ts. kind: answerable (expect = any of these passages, found by file + a quote from its first line), near-miss (on-topic, but the memory doesn't hold the answer), off-topic. Expected passages were converted from the spike's line ranges: every passage that overlapped the range is listed. Journal anchors were removed (Oct 2026, golden test step): eval/run.ts and src/golden.test.ts search an index without .claude/team/journal/** (the journal quotes these questions), so a journal passage can never be found; every question kept its non-journal anchors (A4: the shared.md lesson is the same fact as the removed journal notes).",
  "questions": [
   {
    "id": "A1",
@@ -17,14 +17,6 @@
     {
      "file": ".claude/team/decisions.md",
      "quote": "- **Why:** the owner's idea of a memory the agents"
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- Owner · proposed linking each agent's .md file t"
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- Team lead · recommended retrieval over owner-own"
     }
    ]
   },
@@ -48,10 +40,6 @@
     {
      "file": ".claude/team/decisions.md",
      "quote": "- **Note:** the nightly job can only run once the "
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- 05:50 UTC · owner · ✅ approved the plan for sect"
     }
    ]
   },
@@ -75,10 +63,6 @@
     {
      "file": ".claude/team/decisions.md",
      "quote": "- **Note:** the nightly job can only run once the "
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- 05:50 UTC · owner · ✅ approved the plan for sect"
     }
    ]
   },
@@ -90,14 +74,6 @@
     {
      "file": ".claude/team/lessons/shared.md",
      "quote": "- **Check what the AI layer actually returns befor"
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- Researcher (trial run) · answered \"what can an A"
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- 05:46 UTC · researcher (codebase) · done. Memory"
     }
    ]
   },
@@ -261,22 +237,6 @@
     {
      "file": ".claude/team/decisions.md",
      "quote": "- **Why:** the owner wanted to interact with agent"
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "## Cofounder and one-on-one chats"
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- Owner · asked for a cofounder agent and a way to"
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- claude-code-guide (docs check) · confirmed: `cla"
-    },
-    {
-     "file": ".claude/team/journal/2026-10-11.md",
-     "quote": "- Team lead · added the `cofounder` agent, its not"
     },
     {
      "file": ".claude/team/README.md",
