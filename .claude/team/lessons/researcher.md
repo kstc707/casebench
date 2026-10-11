@@ -11,3 +11,7 @@
   auto-closes external PRs. Anything that sends work upstream needs a quality gate.
 - **Some sites are blocked from this sandbox** (simuai.io, anthropos.work, infoworld.com). Say so and use
   search summaries or other sources, labelled as such.
+- **When docs.github.com or paper sites are blocked here, use raw.githubusercontent.com** (the `github/docs`
+  repo is the source of GitHub's docs) and the paper's own repo BibTeX. Say which you used. (Librarian)
+- **Workspace packages aren't importable from root `scripts/`;** a CLI needing `@casebench/*` belongs in a
+  package. (Librarian)

@@ -14,3 +14,13 @@
   that out and show the `E `-marked lines.
 - **In this sandbox, Node's `fetch` ignores the proxy.** Use `NODE_USE_ENV_PROXY=1` for scripts that
   download.
+- **"Same idea" merge rules must name exact relationships** (same word, synonym group, same compound,
+  word-is-part-of-compound). "Shares any term" merged two different file names via ".ts". (Librarian)
+- **Profile the hot loop before optimising.** Skipping query ideas that can't match anywhere took the worst
+  case from 1.2 s to 4 ms; the suspected merge wasn't the cost. (Librarian)
+- **`pnpm -s` turns every non-zero exit into 1, and plain `pnpm run` prints "> script" lines.** A CLI for
+  agents must put its status inside the JSON. (Librarian `team:ask`)
+- **Anchor eval expectations by quoted text, not line numbers.** decisions.md shifted twice in one step and
+  silently broke line-range checks. (Librarian)
+- **Stemmers bite short words.** Porter's final-"e" rule turned "one" into "on". Leave ≤3-letter words
+  alone, and print the matched terms while tuning. (Librarian)

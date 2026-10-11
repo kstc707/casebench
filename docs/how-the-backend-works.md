@@ -93,6 +93,10 @@ when no key is set.
 | `simulation-engine` | `loadRolePack.ts`, `scenarioSchema.ts`, `starterScenario.ts`, `complexity.ts` | Load cases; the one schema every scenario must pass; Studio template; strip secrets |
 | `content-tools` | `streamwave.ts`, `analyzeStreamwave.ts`, `import-scenario.ts` | Seeded data generator + analyzer; promote Studio exports to official files |
 
+`packages/team-memory` is a **dev tool, not part of the app**: the web app never imports it. It backs
+`pnpm team:ask`, which searches the dev team's notes (`.claude/team/**`, `docs/build-log/**`) and prints
+the closest passages with `file:line` citations. See [build log 15](build-log/15-team-librarian.md).
+
 ### Content (`content/role-packs/data-analyst/companies/streamwave/`)
 
 | File | Goes to the browser? | What |

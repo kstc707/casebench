@@ -31,3 +31,4 @@ if you want the big picture first.
 | 12 | [The author agent: researches real problems and writes simulations](12-author-agent.md) | `claude/author-agent` |
 | 13 | [Redesign: a real workplace, not a generic AI dashboard](13-workplace-ui.md) | `claude/workplace-ui` |
 | 14 | [Practice mode: fix a real bug, graded by its own tests](14-practice-mode.md) | `claude/practice-mode` |
+| 15 | [Team librarian: search the team's notes, with citations and honest labels](15-team-librarian.md) | `claude/dev-team` |

@@ -17,3 +17,16 @@ turn out wrong.
 - **Check what the AI layer actually returns before planning metrics on it.** Token-based grading is in
   the vision, but `packages/ai` drops `usage` entirely (`anthropicProvider.ts`), so nothing downstream can
   count tokens yet. (Researcher trial run, Oct 2026)
+
+### From the librarian build (Oct 11)
+- **Run the documented command exactly as users and agents will type it.** Every unit test passed while
+  `pnpm team:ask … --json` printed pnpm banners before the JSON. Add a test that runs the real command.
+- **Run the whole suite the way CI does, and also with `pnpm -s test`.** pnpm leaks
+  `npm_config_reporter=silent` into child processes; a committed test failed only under `-s`.
+- **Notes that record their own evaluation contaminate it.** The journal quoted test questions and
+  changed results within one round. Refer to eval questions by id or topic, never verbatim (a CI test now
+  enforces this for the searched notes).
+- **Keyword overlap measures topic, not whether the fact is there.** Never present a keyword hit as "the
+  answer"; near-miss questions got confident labels with the fact missing.
+- **An empty result should be an error, not "no match".** A wrong path silently gave an empty corpus,
+  which would have looked like "not found" for everything.

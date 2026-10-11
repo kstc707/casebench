@@ -8,3 +8,10 @@
   a run that's still "started".
 - **Duplicates in logs:** submit once recorded the final test run twice (browser + server). Ask "who
   writes this event?"
+- **After a fix, re-run your earlier probes, not just the tests.** Tests stayed green while a fix pushed
+  exact file-name matches from rank 2 to 4. (Librarian)
+- **When a fix groups alternatives as "best of", check a weak one can't win alone** (a file extension, a
+  folder name) and that two different ideas sharing a generic part aren't merged. (Librarian)
+- **Check that query-side expansions can't stack over a threshold.** Adding a redundant synonym turned a
+  weak result "strong" on a heading-only passage. (Librarian)
+- **When a comment says "calibrated on" a dataset, check the dataset is in the repo.** (Librarian)
