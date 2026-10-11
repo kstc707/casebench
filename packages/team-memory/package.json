@@ -7,7 +7,8 @@
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "eval": "tsx eval/run.ts"
+    "eval": "tsx eval/run.ts",
+    "ask": "tsx src/ask.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

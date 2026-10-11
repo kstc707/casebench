@@ -377,6 +377,16 @@ describe("search on the real team memory", () => {
   });
 });
 
+describe("tables", () => {
+  it("ranks the one table row holding a rare word first, even with a common word added", () => {
+    const rows = Array.from({ length: 12 }, (_, i) => `| \`file${i}.md\` | the team keeps notes on topic ${i} |`);
+    rows[7] = "| `decisions.md` | only the team lead edits it, after the owner agrees |";
+    const text = ["# Files", "", "| File | Job |", "|---|---|", ...rows, "", "- The team writes a note after every step."].join("\n");
+    const idx = buildIndex(splitPassages("t.md", text));
+    expect(search(idx, "decisions.md team").results[0].passage.text).toBe(rows[7]);
+  });
+});
+
 describe("normalizeTerm", () => {
   it("stems plain words and keeps punctuated ones exact", () => {
     expect(normalizeTerm("Infinite")).toBe(stem("infinite"));

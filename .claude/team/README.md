@@ -66,6 +66,11 @@ owner's goal
 | `chats/<agent>.md` | Notes from one-on-one chats with that agent: how it remembers you | The agent, at the end of each chat |
 | `/CLAUDE.md` | Repo conventions (build logs, tests before pushing, …) | Team lead, with the owner |
 
+Before asking the owner about past decisions or lessons, run `pnpm team:ask "…"`: it lists the closest
+passages in these notes with `file:line`. Check whether they answer it. For structured output use
+`pnpm -s team:ask "…" --json` and read `label` first ("closest" or "nothing related"); an error comes back
+as `{"error", "exitCode"}`. (`-s` keeps pnpm's own lines out of stdout but reports every failure as exit 1.)
+
 ## How the team evolves
 
 1. **Every agent ends its report with "Lessons":** 0–3 specific, reusable things it learned, each with

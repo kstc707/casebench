@@ -98,6 +98,23 @@ describe("splitPassages", () => {
     ]);
   });
 
+  it("makes each table row its own passage, skipping the |---| line", () => {
+    const table = ["## Files", "Intro line.", "| File | Job |", "|---|:--:|", "| `a.md` | first |", "| `b.md` | second |", "After."].join("\n");
+    expect(splitPassages("t.md", table).map((p) => [p.startLine, p.endLine, p.heading, p.text])).toEqual([
+      [1, 1, "Files", "## Files"],
+      [2, 2, "Files", "Intro line."],
+      [3, 3, "Files", "| File | Job |"],
+      [5, 5, "Files", "| `a.md` | first |"],
+      [6, 6, "Files", "| `b.md` | second |"],
+      [7, 7, "Files", "After."],
+    ]);
+  });
+
+  it("keeps a table inside a code fence whole", () => {
+    const text = ["```", "| a | b |", "|---|---|", "```"].join("\n");
+    expect(splitPassages("t.md", text)).toHaveLength(1);
+  });
+
   it("returns nothing for empty or whitespace-only input", () => {
     expect(splitPassages("f.md", "")).toEqual([]);
     expect(splitPassages("f.md", "  \n\t\n\n")).toEqual([]);
@@ -140,6 +157,14 @@ describe("loadCorpus (real repo files)", () => {
     expect(corpus.length).toBeGreaterThan(0);
     for (const p of corpus) {
       expect(p.file).toMatch(/^(\.claude\/team|docs\/build-log)\/.+\.md$/);
+    }
+  });
+
+  it("every passage's text is exactly the file lines it cites", () => {
+    const files = new Map<string, string[]>();
+    for (const p of corpus) {
+      if (!files.has(p.file)) files.set(p.file, readFileSync(path.join(root, p.file), "utf-8").split(/\r?\n/));
+      expect(files.get(p.file)!.slice(p.startLine - 1, p.endLine).join("\n"), `${p.file}:${p.startLine}`).toBe(p.text);
     }
   });
 

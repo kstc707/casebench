@@ -34,6 +34,9 @@ const HEADING = /^#{1,6}\s+(.*)$/;
 const TOP_LEVEL_BULLET = /^([-*+]|\d+[.)])\s/;
 // A code fence opener: 3+ backticks or tildes, then an info string (e.g. `bash`).
 const FENCE_OPEN = /^\s*(`{3,}|~{3,})(.*)$/;
+// A markdown table row (starts with "|"), and the |---|:--:| line under a table's header row.
+const TABLE_ROW = /^ {0,3}\|/;
+const TABLE_SEPARATOR = /^ {0,3}\|[\s:|-]*-[\s:|-]*$/;
 
 /**
  * Which lines (0-based) sit inside a fenced code block, opener and closer
@@ -66,8 +69,10 @@ function fencedLines(lines: string[]): Set<number> {
  * Split one markdown file into passages. Pure: no file system access.
  *
  * A new passage starts at each heading (which is also a passage of its own),
- * after each blank line, and at each top-level bullet. Fenced code blocks are
- * kept whole, so a `# comment` inside one is not mistaken for a heading.
+ * after each blank line, and at each top-level bullet. Each table row is a
+ * passage of its own (the |---| separator line is skipped): as one passage, a
+ * long table buried a fact in one row under BM25's length penalty. Fenced code
+ * blocks are kept whole, so a `# comment` inside one is not mistaken for a heading.
  */
 export function splitPassages(file: string, text: string): Passage[] {
   const lines = text.split(/\r?\n/);
@@ -113,6 +118,15 @@ export function splitPassages(file: string, text: string): Passage[] {
     }
 
     if (line.trim() === "") {
+      flush();
+      return;
+    }
+
+    if (TABLE_ROW.test(line)) {
+      flush();
+      if (TABLE_SEPARATOR.test(line)) return;
+      start = lineNo;
+      current = [line];
       flush();
       return;
     }
