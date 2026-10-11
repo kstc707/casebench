@@ -6,7 +6,17 @@ confirmed by the owner.
 
 ---
 
-### 2026-10-11 · Librarian results are labelled strong / weak / not found · **Decided**
+### 2026-10-11 · Librarian labels: "closest passages — check them" or "nothing related" · **Decided**
+- **What:** section 1 never claims to have found the answer. It always shows the top passages with sources
+  under "closest passages: check whether they answer it", or says "nothing related found" when the
+  question clearly isn't about our work. Judging whether a passage contains the fact moves to section 2
+  (Gemini must quote it, and the code checks the quote).
+- **Why:** on 22 unseen questions, near-miss questions ("hex code of the sidebar", "Playwright version")
+  were labelled "strong" when the passage was on-topic but lacked the fact. Keyword overlap measures
+  topic, not answers, so tuning can't fix it. Also 4/16 real answers were hidden as "not found".
+- **Replaces:** the strong / weak / not found labels below.
+
+### 2026-10-11 · ~~Librarian results are labelled strong / weak / not found~~ · **Replaced** (see above)
 - **What:** after the risk check, section 1 adds a small hand-kept synonym list and labels each result
   "strong match", "weak match: check it" or "not found", instead of presenting search results as answers.
   A reliable "not found" is section 2's job: the AI step must quote passages word for word.

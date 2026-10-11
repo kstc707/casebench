@@ -1,0 +1,328 @@
+{
+ "about": "Librarian risk-check questions (step 1, Oct 2026), used to CALIBRATE the label threshold in src/search.ts. kind: answerable (expect = any of these passages, found by file + a quote from its first line), near-miss (on-topic, but the memory doesn't hold the answer), off-topic. Expected passages were converted from the spike's line ranges: every passage that overlapped the range is listed.",
+ "questions": [
+  {
+   "id": "A1",
+   "q": "Why are we doing search over our notes instead of training a small model on them?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "### 2026-10-11 · Librarian section 1: search-only "
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **What:** a keyword-search \"ask\" command over `."
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Why:** the owner's idea of a memory the agents"
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- Owner · proposed linking each agent's .md file t"
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- Team lead · recommended retrieval over owner-own"
+    }
+   ]
+  },
+  {
+   "id": "A2",
+   "q": "Which model is planned for the librarian's answer step, and what privacy downside did we accept?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "### 2026-10-11 · Small model: Gemini free tier; ni"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **What:** section 2 of the librarian uses Gemini"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Trade-off accepted:** on the free tier Google "
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Note:** the nightly job can only run once the "
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- 05:50 UTC · owner · ✅ approved the plan for sect"
+    }
+   ]
+  },
+  {
+   "id": "A3",
+   "q": "Is the daily journal job allowed to commit straight to main?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "### 2026-10-11 · Small model: Gemini free tier; ni"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **What:** section 2 of the librarian uses Gemini"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Trade-off accepted:** on the free tier Google "
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Note:** the nightly job can only run once the "
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- 05:50 UTC · owner · ✅ approved the plan for sect"
+    }
+   ]
+  },
+  {
+   "id": "A4",
+   "q": "Can we score learners on how many tokens they spent?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/lessons/shared.md",
+     "quote": "- **Check what the AI layer actually returns befor"
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- Researcher (trial run) · answered \"what can an A"
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- 05:46 UTC · researcher (codebase) · done. Memory"
+    }
+   ]
+  },
+  {
+   "id": "A5",
+   "q": "Python in WebAssembly won't start inside the worker that Next builds - how did we get around it?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/lessons/engineer.md",
+     "quote": "- **Next.js bundles web workers as classic scripts"
+    },
+    {
+     "file": "docs/build-log/14-practice-mode.md",
+     "quote": "- `scripts/practice-worker.mjs` is a **module** we"
+    }
+   ]
+  },
+  {
+   "id": "A6",
+   "q": "My Node script times out downloading files in the sandbox, what setting fixes it?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/lessons/engineer.md",
+     "quote": "- **In this sandbox, Node's `fetch` ignores the pr"
+    }
+   ]
+  },
+  {
+   "id": "A7",
+   "q": "Could someone cheat and mark a practice exercise as passed without really fixing it?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/14-practice-mode.md",
+     "quote": "## Known limit: the result is checked in the brows"
+    },
+    {
+     "file": "docs/build-log/14-practice-mode.md",
+     "quote": "The tests run on the learner's machine, so a deter"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "### 2026-10-09 · Practice mode section 1 shipped ("
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **What:** five real humanize bugs; code before t"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Limit accepted:** results are checked in the b"
+    }
+   ]
+  },
+  {
+   "id": "A8",
+   "q": "What happens when the learner's code gets stuck in an endless loop?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/14-practice-mode.md",
+     "quote": "- A run that takes over 60 s (an infinite loop) is"
+    }
+   ]
+  },
+  {
+   "id": "A9",
+   "q": "Why don't we execute submitted code on our backend?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": "docs/build-log/14-practice-mode.md",
+     "quote": "## Known limit: the result is checked in the brows"
+    },
+    {
+     "file": "docs/build-log/14-practice-mode.md",
+     "quote": "The tests run on the learner's machine, so a deter"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "### 2026-10-09 · Practice mode section 1 shipped ("
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **What:** five real humanize bugs; code before t"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Limit accepted:** results are checked in the b"
+    },
+    {
+     "file": ".claude/team/lessons/planner.md",
+     "quote": "- **Security changes the plan:** running user code"
+    }
+   ]
+  },
+  {
+   "id": "A10",
+   "q": "Which other companies already sell job simulations with AI teammates?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/lessons/researcher.md",
+     "quote": "- **Competitors already doing \"AI coworkers in a j"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "### 2026-10 · Real tasks from open source; practic"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **What:** Tier 1 = already-fixed issues graded b"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Why:** differentiates from Kaggle/LeetCode and"
+    }
+   ]
+  },
+  {
+   "id": "A11",
+   "q": "A duration showed up as a gigantic number of seconds once - what was the cause?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/lessons/engineer.md",
+     "quote": "- **Watch for shadowed variables.** Reusing `start"
+    },
+    {
+     "file": ".claude/team/lessons/tester.md",
+     "quote": "- **Look at the screenshots.** A passing script on"
+    }
+   ]
+  },
+  {
+   "id": "A12",
+   "q": "How many of the practice tasks were actually usable in the first experiment once the import crashes were sorted out?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/lessons/shared.md",
+     "quote": "- **Tell \"the environment is broken\" apart from \"t"
+    }
+   ]
+  },
+  {
+   "id": "A13",
+   "q": "How can the owner have a one-to-one conversation with a single agent?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "### 2026-10-11 · Add a cofounder agent and one-on-"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **What:** a `cofounder` agent, a strategic partn"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **Why:** the owner wanted to interact with agent"
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "## Cofounder and one-on-one chats"
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- Owner · asked for a cofounder agent and a way to"
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- claude-code-guide (docs check) · confirmed: `cla"
+    },
+    {
+     "file": ".claude/team/journal/2026-10-11.md",
+     "quote": "- Team lead · added the `cofounder` agent, its not"
+    },
+    {
+     "file": ".claude/team/README.md",
+     "quote": "`/talk <agent>` (e.g. `/talk cofounder`, `/talk re"
+    }
+   ]
+  },
+  {
+   "id": "A14",
+   "q": "What happened to the feedback form pull request?",
+   "kind": "answerable",
+   "expect": [
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "### 2026-10 · A PDF case study instead of a feedba"
+    },
+    {
+     "file": ".claude/team/decisions.md",
+     "quote": "- **What:** share Casebench with a PDF case study;"
+    }
+   ]
+  },
+  {
+   "id": "U1",
+   "q": "Which Kubernetes cluster runs our database backups?",
+   "kind": "off-topic"
+  },
+  {
+   "id": "U2",
+   "q": "How many paying customers signed up last month?",
+   "kind": "off-topic"
+  },
+  {
+   "id": "U3",
+   "q": "What is the refund policy for premium subscriptions?",
+   "kind": "off-topic"
+  },
+  {
+   "id": "U4",
+   "q": "Which font did the owner choose for the logo?",
+   "kind": "off-topic"
+  },
+  {
+   "id": "U5",
+   "q": "How long does the nightly journal job take to finish on GitHub Actions?",
+   "kind": "near-miss"
+  }
+ ]
+}
