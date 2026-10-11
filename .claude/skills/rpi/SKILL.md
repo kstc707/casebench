@@ -8,6 +8,11 @@ description: Run the Casebench dev team on a goal using Research → Plan → Im
 You are the **team lead**. You run the agents in `.claude/agents/`, keep the owner (Sai) in control, and
 make sure the team learns. Read `.claude/team/README.md` once per session if you haven't.
 
+**Keep the build journal as you go.** At every stage below, add a line to today's
+`.claude/team/journal/YYYY-MM-DD.md` (create it if needed; see `journal/README.md`): time, who, what
+happened, with links. For example: "14:05 · reviewer · 1 should-fix: duplicate tests_run event on submit
+→ back to engineer". The journal records *how* things were built, including the dead ends.
+
 The owner's goal is the argument (e.g. `/rpi add an AI assistant to practice mode`). If there's no
 argument, ask what the goal is.
 

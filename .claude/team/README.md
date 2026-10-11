@@ -62,6 +62,7 @@ owner's goal
 | `glossary.md` | Terms we use, so agents and the owner mean the same thing | Team lead |
 | `lessons/shared.md` | Lessons that apply to everyone | Team lead (from retros) |
 | `lessons/<agent>.md` | Each agent's own lessons | Team lead (from retros) |
+| `journal/YYYY-MM-DD.md` | The build journal: how each day's work went, stage by stage | Team lead, as work happens |
 | `chats/<agent>.md` | Notes from one-on-one chats with that agent: how it remembers you | The agent, at the end of each chat |
 | `/CLAUDE.md` | Repo conventions (build logs, tests before pushing, …) | Team lead, with the owner |
 
