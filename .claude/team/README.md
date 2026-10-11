@@ -1,6 +1,7 @@
 # The Casebench dev team
 
-Six AI agents that build Casebench with the owner (Sai), using **Research → Plan → Implement (RPI)**.
+Six AI agents that build Casebench with the owner (Sai), using **Research → Plan → Implement (RPI)**,
+plus a **cofounder** the owner thinks things through with.
 They live in `.claude/agents/` and are run by the main Claude Code session, the **team lead**,
 through the `/rpi` workflow (`.claude/skills/rpi/SKILL.md`).
 
@@ -18,6 +19,14 @@ the owner can explain it.
 | `reviewer` | Reads the diff like a skeptical senior engineer: bugs, security, scope creep. | No |
 | `tester` | Proves it works: runs checks, clicks through in a real browser, tries the failure paths. | Test scripts only |
 | `docs-writer` | Writes the build log and a plain-language summary the owner can present. | Docs only |
+| `cofounder` | **The owner's thinking partner**, not a builder: challenges ideas, brings evidence, keeps notes of every conversation. | Its own notes only |
+
+## Talking to one team member directly
+
+`/talk <agent>` (e.g. `/talk cofounder`, `/talk reviewer`) starts a one-on-one chat that works anywhere,
+including web and mobile. The agent greets you, remembers your last chat from `chats/<agent>.md`, and
+writes a short note when you say bye. In a terminal, `claude --agent cofounder` runs a whole session as
+that agent.
 
 ## The flow
 
@@ -53,6 +62,7 @@ owner's goal
 | `glossary.md` | Terms we use, so agents and the owner mean the same thing | Team lead |
 | `lessons/shared.md` | Lessons that apply to everyone | Team lead (from retros) |
 | `lessons/<agent>.md` | Each agent's own lessons | Team lead (from retros) |
+| `chats/<agent>.md` | Notes from one-on-one chats with that agent: how it remembers you | The agent, at the end of each chat |
 | `/CLAUDE.md` | Repo conventions (build logs, tests before pushing, …) | Team lead, with the owner |
 
 ## How the team evolves

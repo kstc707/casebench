@@ -35,7 +35,8 @@ terms on first use, prefer plain language, and point to exact files.
 Casebench is built by a team of AI agents with the owner, using Research → Plan → Implement:
 `researcher`, `planner`, `engineer`, `reviewer`, `tester`, `docs-writer` (`.claude/agents/`). Run them
 with the `/rpi` workflow (`.claude/skills/rpi/SKILL.md`). The owner approves every plan before code, and
-decides every merge.
+decides every merge. The `cofounder` agent is the owner's strategic partner; `/talk <agent>` opens a
+one-on-one chat with any team member.
 
 Read `.claude/team/vision-anchor.md` (the owner's words; only the owner edits it) and
 `.claude/team/decisions.md` before proposing product changes. After each section, the team records what

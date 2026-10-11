@@ -6,6 +6,12 @@ confirmed by the owner.
 
 ---
 
+### 2026-10-11 · Add a cofounder agent and one-on-one chats · **Decided**
+- **What:** a `cofounder` agent, a strategic partner that challenges ideas and keeps a notebook, plus `/talk
+  <agent>` so the owner can chat with any team member directly (it remembers through `chats/<agent>.md`).
+- **Why:** the owner wanted to interact with agents individually, *"rather than just guiding the
+  manager"*, and wanted a partner for direction, separate from the builders.
+
 ### 2026-10-11 · Build a dev team of AI agents · **Decided**
 - **What:** six agents (researcher, planner, engineer, reviewer, tester, docs-writer) working through RPI,
   each keeping a lessons file updated after every task.
